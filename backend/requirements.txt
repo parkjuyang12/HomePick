@@ -1,0 +1,5 @@
+# HomePick/backend/requirements.txt
+Django~=4.2
+psycopg2-binary # PostgreSQL 드라이버
+djangorestframework
+django-cors-headers
