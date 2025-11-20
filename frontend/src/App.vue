@@ -1,19 +1,14 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
-  
-  <ApiTest/>  </template>
+  <div id="app">
+    <router-view/> 
+  </div>
+</template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-import ApiTest from './components/ApiTest.vue' // 👈 새로 추가
-
+// 기존의 HelloWorld나 ApiTest 임포트 내용을 모두 지웁니다.
 export default {
   name: 'App',
-  components: {
-    HelloWorld,
-    ApiTest // 👈 새로 추가
-  }
+  // components: {} 항목도 삭제하거나 비워둡니다.
 }
 </script>
 
