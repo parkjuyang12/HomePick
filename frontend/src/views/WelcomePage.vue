@@ -28,7 +28,8 @@ export default {
   name: 'WelcomePage',
   methods: {
     goToLogin() {
-      this.$router.push('/login');
+      // this.$router.push('/login');
+      this.$router.push('/home')
     },
     goToRegister() {
       this.$router.push('/register');

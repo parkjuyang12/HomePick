@@ -6,23 +6,38 @@ import { createRouter, createWebHistory } from 'vue-router';
 // 2. 라우트 정의
 const routes = [
   {
-    path: '/',
+    path: '/welcome',
     name: 'Welcome',
-    // ✅ 동적 임포트 방식으로 경로 지정
     component: () => import('../views/WelcomePage.vue') 
-  }
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   // Login 페이지가 views 폴더에 있다고 가정
-  //   component: () => import('../views/LoginPage.vue') 
-  // },
-  // {
-  //   path: '/register',
-  //   name: 'Register',
-  //   // Register 페이지가 views 폴더에 있다고 가정
-  //   component: () => import('../views/RegisterPage.vue')
-  // }
+  },
+   {
+    path: "/home",
+    name: "Home",
+    component: () => import("@/views/HomePage.vue")
+  },
+  {
+    path: "/policy",
+    name: "Policy",
+    component: () => import("@/views/PolicyPage.vue")
+  },
+  {
+    path: "/map",
+    name: "Map",
+    component: () => import("@/views/MapPage.vue")
+  },
+  {
+    path: "/favorite",
+    name: "Favorite",
+    component: () => import("@/views/FavoritePage.vue")
+  },
+  {
+    path: "/more",
+    name: "More",
+    component: () => import("@/views/MorePage.vue")
+  },
+
+  // 기본 경로 리다이렉트
+  { path: "/", redirect: "/home" }
 ];
 
 // 3. 라우터 인스턴스 생성
