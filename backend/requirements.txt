@@ -3,3 +3,7 @@ Django~=4.2
 psycopg2-binary # PostgreSQL 드라이버
 djangorestframework
 django-cors-headers
+django-allauth          # 소셜 로그인 통합 모델 
+django-rest-auth        # DRF와 allauth를 연결하여 API 인증 
+djangorestframework-simplejwt # JWT 위한 모듈
+requests
