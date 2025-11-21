@@ -1,3 +1,6 @@
+from django.contrib import admin
+from django.urls import path, include
+
 """
 URL configuration for core project.
 
@@ -18,5 +21,8 @@ from django.contrib import admin
 from django.urls import path
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('api/v1/auth/', include('rest_auth.urls')),          # 로그인, 로그아웃
+    path('api/v1/auth/registration/', include('rest_auth.registration.urls')), # 회원가입
+    path('api/v1/auth/social/', include('allauth.socialaccount.urls')), # 카카오 로그인 처리
+    path('api/v1/apartment/', include('apartment.urls')), # 부동산 데이터 API
 ]

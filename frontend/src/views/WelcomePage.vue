@@ -12,51 +12,91 @@
     </div>
 
     <div class="action-area">
-      <button class="primary-button" @click="goToLogin">
-        홈픽 시작하기!! (로그인)
-      </button>
-
-      <button class="secondary-button" @click="goToRegister">
-        이메일로 3초 만에 회원가입asd
-      </button>
+      <SocialLoginButtons 
+        @login="handleSocialLogin"
+        @show-more-options="showBottomSheet = true"
+      />
     </div>
+    <LoginMethodsBottomSheet 
+      :show="showBottomSheet"
+      @close="showBottomSheet = false"
+      @login="handleBottomSheetLogin"
+    />
   </div>
 </template>
 
 <script>
+import SocialLoginButtons from '@/components/Login/SocialLoginButtons.vue';
+import LoginMethodsBottomSheet from '@/components/Login/LoginMethodsBottomSheet.vue';
+const KAKAO_REST_API_KEY = process.env.VUE_APP_KAKAO_REST_API_KEY || "59a25a1c255d5c3afbbcb2633d17c693"; 
+const KAKAO_REDIRECT_URI = process.env.VUE_APP_KAKAO_REDIRECT_URI || "http://localhost:8000/api/v1/auth/social/login/kakao/callback/"; 
+
+const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?client_id=${KAKAO_REST_API_KEY}&redirect_uri=${KAKAO_REDIRECT_URI}&response_type=code&scope=profile_nickname,account_email`;
+
+
 export default {
-  name: 'WelcomePage',
-  methods: {
-    goToLogin() {
-      this.$router.push('/login');
+    name: 'WelcomePage',
+    components: {
+      SocialLoginButtons,
+      LoginMethodsBottomSheet
     },
-    goToRegister() {
-      this.$router.push('/register');
+    data() {
+      return {
+        showBottomSheet: false
+      }
+    },
+    methods: {
+      handleSocialLogin(provider) {
+        console.log(`${provider} 로그인 시도`);
+        
+        if (provider === 'kakao') {
+          // ✅ 카카오 로그인 로직: 카카오 인증 서버로 브라우저 리다이렉트
+          window.location.href = KAKAO_AUTH_URL; 
+          
+        } else if (provider === 'naver') {
+          console.log('네이버 로그인 구현 필요');
+          
+        } else if (provider === 'apple') {
+          console.log('애플 로그인 구현 필요');
+        }
+      },
+      
+      handleBottomSheetLogin(method) {
+        console.log(`${method} 로그인 시도`);
+        if (method === 'email') {
+          this.$router.push('/login'); 
+        } else if (method === 'phone') {
+          this.$router.push('/phone-login');
+        } else if (method === 'apple') {
+          console.log('다른 로그인 방식 처리 필요');
+        }
+      }
     }
-  }
 }
 </script>
+
 
 <style scoped>
 .welcome-container {
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* 내용과 버튼을 상하로 분리 */
-    min-height: 100vh; /* 화면 전체 높이 사용 */
-    padding: 30px 20px; /* 좌우 여백 조정 */
-    background-color: #f5f5f7; /* 토스 느낌의 연한 배경 */
+    justify-content: space-between; 
+    height: 100%;
+    padding: 40px 25px;
+    padding-bottom: 40px;
+    background-color: #f5f5f7;
     text-align: center;
+    box-sizing: border-box;
 }
 
 .content-area {
     flex-grow: 1; 
     display: flex;
     flex-direction: column;
-    justify-content: center; /* 내용을 수직 중앙 정렬 */
-    align-items: center; /* ⭐ 콘텐츠를 수평 중앙 정렬 */
-    padding-top: 50px;
-    max-width: 400px; /* ⭐ 최대 너비 설정 */
-    margin: 0 auto; /* 중앙 정렬 */
+    justify-content: center;
+    align-items: center;
+    max-width: 400px;
+    margin: 0 auto;
 }
 
 .main-title {
@@ -67,7 +107,7 @@ export default {
     margin-bottom: 10px;
 }
 .main-title strong {
-    color: #3369FF; /* 핵심 단어는 토스 블루로 강조 */
+    color: #3369FF;
 }
 
 .sub-text {
@@ -77,43 +117,9 @@ export default {
 
 .action-area {
     width: 100%;
-    max-width: 400px; /* ⭐ 버튼 영역도 중앙 정렬 및 최대 너비 제한 */
+    max-width: 400px; 
     margin: 0 auto;
-    padding-bottom: 20px;
-}
-
-/* 1순위 버튼: 토스 시그니처 블루 */
-.primary-button {
-    width: 100%;
-    height: 56px;
-    background-color: #3369FF; 
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: background-color 0.2s; /* 사용자 경험 향상 */
-}
-.primary-button:active {
-    background-color: #1d4cdb;
-}
-
-/* 2순위 버튼: 흰색 배경에 파란색 테두리 */
-.secondary-button {
-    width: 100%;
-    height: 56px;
-    background-color: white;
-    color: #3369FF;
-    border: 1px solid #d9d9d9;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.secondary-button:active {
-    background-color: #f0f0f0;
+    padding-bottom: 0;
+    flex-shrink: 0;
 }
 </style>
