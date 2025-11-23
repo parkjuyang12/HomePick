@@ -89,7 +89,7 @@
   display: flex;
   align-items: center;
 
-  margin: 0 20px;
+  margin: 20px;
   padding: 12px 16px;
 
   background: white;

@@ -1,6 +1,6 @@
 <template>
   <div class="tab-item" @click="go">
-    <img :src="icon" :class="{ active: active }" class="tab-icon" />
+    <img :src="icon" :class="{ active: isActive }" class="tab-icon" />
   </div>
 </template>
 
@@ -14,8 +14,7 @@ import moreIcon from '@/assets/tabitem/더보기.png';
 export default {
   props: {
     label: { type: String, required: true },
-    route: { type: String, required: true },
-    active: { type: Boolean, default: false }
+    route: { type: String, required: true }
   },
 
   computed: {
@@ -27,14 +26,18 @@ export default {
         정책: policyIcon,
         더보기: moreIcon
       };
-
       return map[this.label] || homeIcon;
+    },
+
+    // 🔥 현재 라우트 기반 active 자동 계산
+    isActive() {
+      return this.$route.path === this.route;
     }
   },
 
   methods: {
     go() {
-      this.$emit('click');
+      this.$router.push(this.route);
     }
   }
 };
@@ -60,7 +63,6 @@ export default {
 /* active 상태 효과 */
 .tab-icon.active {
   opacity: 1;
-  filter: brightness(0) invert(0.1);  /* 진하게 보이도록 */
-  transform: scale(1.08);             /* 약간 커짐 */
+  transform: scale(1.2);
 }
 </style>

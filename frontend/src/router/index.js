@@ -6,7 +6,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 // 2. 라우트 정의
 const routes = [
   {
-    path: '/welcome',
+    path: '/',
     name: 'Welcome',
     component: () => import('../views/WelcomePage.vue') 
   },
