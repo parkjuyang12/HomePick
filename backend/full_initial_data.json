@@ -1,0 +1,65 @@
+[
+{
+  "model": "users.user",
+  "pk": 1,
+  "fields": {
+    "password": "",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "kakao_4591309495",
+    "first_name": "",
+    "last_name": "",
+    "email": "qkrdid87@daum.net",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2025-11-24T07:41:10.696Z",
+    "nickname": "주양",
+    "profile_image": "",
+    "kakao_id": "4591309495",
+    "phone_number": null,
+    "birth_date": null,
+    "created_at": "2025-11-24T07:41:10.697Z",
+    "updated_at": "2025-11-24T08:11:01.751Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "socialaccount.socialaccount",
+  "pk": 1,
+  "fields": {
+    "user": 1,
+    "provider": "kakao",
+    "uid": "4591309495",
+    "last_login": "2025-11-24T07:41:10.707Z",
+    "date_joined": "2025-11-24T07:41:10.707Z",
+    "extra_data": {
+      "id": 4591309495,
+      "properties": {
+        "nickname": "주양"
+      },
+      "connected_at": "2025-11-24T05:36:47Z",
+      "kakao_account": {
+        "email": "qkrdid87@daum.net",
+        "profile": {
+          "nickname": "주양",
+          "is_default_nickname": false
+        },
+        "has_email": true,
+        "is_email_valid": true,
+        "is_email_verified": true,
+        "email_needs_agreement": false,
+        "profile_nickname_needs_agreement": false
+      }
+    }
+  }
+},
+{
+  "model": "sites.site",
+  "pk": 1,
+  "fields": {
+    "domain": "example.com",
+    "name": "example.com"
+  }
+}
+]
