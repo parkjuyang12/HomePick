@@ -54,13 +54,14 @@ html, body {
 }
 
 .phone-wrapper {
+    /* ... (기존 스타일 유지) */
     position: relative;
     width: 100%; 
     max-width: 420px;
-    height: 100%;
+    /* 🟢 phone-wrapper에 height: 100% 추가 (App #app으로부터 높이 상속) */
+    height: 100%; 
     max-height: 900px;
 }
-
 
 .phone-frame {
     width: 100%;
@@ -68,12 +69,24 @@ html, body {
     background: #1a1a1a;
     border-radius: 55px;
     padding: 8px; 
+    /* 🟢 phone-frame에 display: flex 추가 (높이 100%를 상속받기 위함) */
+    display: flex; 
     box-shadow: 
         0 0 0 3px #0a0a0a,
         0 0 0 14px #2a2a2a,
         0 25px 70px rgba(0, 0, 0, 0.6);
     position: relative;
     box-sizing: border-box;
+}
+
+.screen {
+    width: 100%;
+    /* 🟢 수정: 높이를 100%로 명확히 지정하여 자식(WelcomePage)에게 전달 */
+    height: 100%; 
+    background: #f5f5f7;
+    border-radius: 48px; 
+    overflow: hidden;
+    position: relative;
 }
 
 
@@ -109,14 +122,7 @@ html, body {
 }
 
 
-.screen {
-    width: 100%;
-    height: 100%;
-    background: #f5f5f7;
-    border-radius: 48px; 
-    overflow: hidden;
-    position: relative;
-}
+
 
 
 .home-indicator {
@@ -188,6 +194,8 @@ html, body {
     .phone-wrapper {
         max-width: 100%;
         max-height: 100%;
+        /* 🟢 추가: phone-wrapper도 모바일 환경에서 100% 높이를 갖도록 */
+        height: 100vh; 
     }
     
     .phone-frame {
@@ -195,6 +203,8 @@ html, body {
         padding: 0;
         box-shadow: none;
         background: transparent;
+        /* 🟢 추가: phone-frame도 100% 높이를 갖도록 */
+        height: 100%;
     }
     
     .notch,
@@ -205,6 +215,8 @@ html, body {
     
     .screen {
         border-radius: 0;
+        /* 🟢 수정/추가: screen이 100% 높이를 갖도록 */
+        height: 100%; 
     }
 }
 
