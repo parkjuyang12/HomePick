@@ -81,14 +81,17 @@ html, body {
 
 .screen {
     width: 100%;
-    /* 🟢 수정: 높이를 100%로 명확히 지정하여 자식(WelcomePage)에게 전달 */
     height: 100%; 
     background: #f5f5f7;
     border-radius: 48px; 
-    overflow: hidden;
+    overflow: auto; 
     position: relative;
+    -webkit-overflow-scrolling: touch; 
 }
 
+.screen::-webkit-scrollbar {
+    display: none;
+}
 
 .notch {
     position: absolute;

@@ -54,7 +54,8 @@ export default {
     mounted() {
       const token = localStorage.getItem('auth_token');
       if (token) {
-        this.$router.push('/');
+        console.log('이미 로그인됨 - 홈으로 이동');
+        this.$router.push('/home'); // 로그인 되어 있으면 home으로 이동 
       }
     },
     methods: {

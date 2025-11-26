@@ -1,27 +1,30 @@
 <template>
   <div class="callback-container">
-    <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <h2>로그인 중...</h2>
-      <p>잠시만 기다려주세요</p>
+    <div v-if="showSplash" class="splash-screen">
+      <img src="@/assets/logo.png" alt="HomePick" class="splash-logo" />
+    </div>
+    
+    <div v-else-if="loading" class="splash-screen">
+      <img src="@/assets/logo.png" alt="HomePick" class="splash-logo" />
     </div>
     
     <div v-else-if="showWelcome" class="welcome">
       <div class="welcome-icon">🎉</div>
       <h1>환영합니다!</h1>
       <p class="user-name">{{ userInfo.nickname }}님</p>
-      <p class="welcome-text">홈픽에서 완벽한 아파트를 찾아보세요</p>
+      <p class="welcome-text">홈픽에서 완벽한 부동산 정보를 찾아보세요</p>
       <button @click="goToHome" class="start-button">
         시작하기
       </button>
       <p class="auto-redirect">{{ countdown }}초 후 자동으로 이동됩니다</p>
     </div>
     
+    <!-- 에러 -->
     <div v-else-if="error" class="error">
       <div class="error-icon">😢</div>
       <h2>로그인 실패</h2>
       <p>{{ error }}</p>
-      <button @click="$router.push('/')">다시 시도</button>
+      <button @click="goToWelcome">다시 시도</button>
     </div>
   </div>
 </template>
@@ -32,6 +35,7 @@ export default {
   data() {
     return {
       loading: true,
+      showSplash: false,
       showWelcome: false,
       error: null,
       userInfo: null,
@@ -44,7 +48,6 @@ export default {
     this.handleCallback();
   },
   beforeUnmount() {
-    // 컴포넌트 종료 시 타이머 정리
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
     }
@@ -84,8 +87,9 @@ export default {
           this.showWelcome = true;
           this.startCountdown();
         } else {
-          // 기존 사용자: 0.8초 후 바로 메인으로
-          console.log('✅ 기존 사용자 - 메인으로 이동');
+          // 기존 사용자: 0.8초 스플래시 후 홈으로
+          console.log('✅ 기존 사용자 - 스플래시 표시');
+          this.showSplash = true;
           setTimeout(() => {
             this.goToHome();
           }, 800);
@@ -114,7 +118,6 @@ export default {
     },
     
     startCountdown() {
-      // 5초 카운트다운
       this.countdownInterval = setInterval(() => {
         this.countdown--;
         if (this.countdown <= 0) {
@@ -125,16 +128,13 @@ export default {
     },
     
     goToHome() {
-      // Toss 스타일 페이드 아웃 애니메이션
-      const container = document.querySelector('.callback-container');
-      if (container) {
-        container.style.opacity = '0';
-        container.style.transform = 'scale(0.95)';
-      }
-      
-      setTimeout(() => {
-        this.$router.push('/');
-      }, 300);
+      // 스플래시가 페이드 아웃되고 바로 홈으로 이동
+      this.$router.push('/home');
+    },
+    
+    goToWelcome() {
+      // 실패 시 Welcome 페이지로
+      this.$router.push('/welcome');
     }
   }
 }
@@ -147,34 +147,96 @@ export default {
   box-sizing: border-box;
 }
 
+/* ============ 스플래시 스크린 ============ */
+.splash-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeSplash 1.8s ease forwards;
+}
+
+@keyframes fadeSplash {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.splash-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  animation: scaleIn 0.6s ease;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .callback-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100%;
+  position: relative;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ============ 로딩 ============ */
+/* ============ 로딩 (로고 포함) ============ */
 .loading {
   text-align: center;
   color: white;
+  animation: fadeIn 0.5s ease;
 }
 
-.loading h2 {
-  font-size: 24px;
-  margin-bottom: 10px;
-  font-weight: 600;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.loading p {
-  font-size: 14px;
-  opacity: 0.9;
+.loading-logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 30px;
+  animation: pulse 2s ease-in-out infinite;
+  filter: brightness(0) invert(1); /* 로고를 흰색으로 */
 }
 
-.spinner {
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.loading-spinner {
   border: 4px solid rgba(255, 255, 255, 0.3);
   border-left-color: white;
   border-radius: 50%;
@@ -186,6 +248,13 @@ export default {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  opacity: 0.9;
 }
 
 /* ============ 환영 메시지 ============ */
@@ -321,6 +390,10 @@ export default {
 
 /* ============ 모바일 대응 ============ */
 @media (max-width: 480px) {
+  .loading-logo {
+    width: 120px;
+  }
+  
   .welcome {
     padding: 40px 30px;
   }
