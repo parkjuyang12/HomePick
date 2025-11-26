@@ -14,7 +14,7 @@ const routes = [
     path: '/auth/kakao/callback',
     name: 'KakaoCallback',
     component: () => import('../views/KakaoCallback.vue')
-  }
+  },
   // {
   //   path: '/login',
   //   name: 'Login',
@@ -25,6 +25,31 @@ const routes = [
   //   name: 'Register',
   //   component: () => import('../views/RegisterPage.vue')
   // }
+  {
+    path: "/home",
+    name: "Home",
+    component: () => import("@/views/HomePage.vue")
+  },
+  {
+    path: "/policy",
+    name: "Policy",
+    component: () => import("@/views/PolicyPage.vue")
+  },
+  {
+    path: "/map",
+    name: "Map",
+    component: () => import("@/views/MapPage.vue")
+  },
+  {
+    path: "/favorite",
+    name: "Favorite",
+    component: () => import("@/views/FavoritePage.vue")
+  },
+  {
+    path: "/more",
+    name: "More",
+    component: () => import("@/views/MorePage.vue")
+  }
 ];
 
 // 3. 라우터 인스턴스 생성

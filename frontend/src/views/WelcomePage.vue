@@ -6,7 +6,7 @@
 
     <div class="content-area">
       <h1 class="main-title">
-        대한민국 아파트 실거래가,<br>
+        대한민국 부동산 실거래가,<br>
         이제 <strong>홈픽</strong>으로 정확하게.
       </h1>
 
@@ -22,6 +22,7 @@
         @show-more-options="showBottomSheet = true"
       />
     </div>
+
 
     <LoginMethodsBottomSheet 
       :show="showBottomSheet"
