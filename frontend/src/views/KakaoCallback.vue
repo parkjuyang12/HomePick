@@ -1,0 +1,418 @@
+<template>
+  <div class="callback-container">
+    <div v-if="showSplash" class="splash-screen">
+      <img src="@/assets/logo.png" alt="HomePick" class="splash-logo" />
+    </div>
+    
+    <div v-else-if="loading" class="splash-screen">
+      <img src="@/assets/logo.png" alt="HomePick" class="splash-logo" />
+    </div>
+    
+    <div v-else-if="showWelcome" class="welcome">
+      <div class="welcome-icon">🎉</div>
+      <h1>환영합니다!</h1>
+      <p class="user-name">{{ userInfo.nickname }}님</p>
+      <p class="welcome-text">홈픽에서 완벽한 부동산 정보를 찾아보세요</p>
+      <button @click="goToHome" class="start-button">
+        시작하기
+      </button>
+      <p class="auto-redirect">{{ countdown }}초 후 자동으로 이동됩니다</p>
+    </div>
+    
+    <!-- 에러 -->
+    <div v-else-if="error" class="error">
+      <div class="error-icon">😢</div>
+      <h2>로그인 실패</h2>
+      <p>{{ error }}</p>
+      <button @click="goToWelcome">다시 시도</button>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'KakaoCallback',
+  data() {
+    return {
+      loading: true,
+      showSplash: false,
+      showWelcome: false,
+      error: null,
+      userInfo: null,
+      isNewUser: false,
+      countdown: 5,
+      countdownInterval: null
+    }
+  },
+  mounted() {
+    this.handleCallback();
+  },
+  beforeUnmount() {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+  },
+  methods: {
+    async handleCallback() {
+      try {
+        // URL 파라미터 추출
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const userId = urlParams.get('user_id');
+        this.isNewUser = urlParams.get('is_new_user') === 'true';
+        
+        console.log('📦 받은 데이터:', { token, userId, isNewUser: this.isNewUser });
+        
+        if (!token) {
+          throw new Error('토큰을 받지 못했습니다.');
+        }
+        
+        // 1. 토큰 저장
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user_id', userId);
+        console.log('💾 토큰 저장 완료');
+        
+        // 2. 사용자 정보 가져오기
+        this.userInfo = await this.fetchUserInfo(token);
+        localStorage.setItem('user_info', JSON.stringify(this.userInfo));
+        console.log('👤 사용자 정보:', this.userInfo);
+        
+        // 3. 로딩 완료
+        this.loading = false;
+        
+        // 4. 분기 처리
+        if (this.isNewUser) {
+          // 신규 사용자: 환영 페이지 표시
+          console.log('🎉 신규 사용자 - 환영 페이지 표시');
+          this.showWelcome = true;
+          this.startCountdown();
+        } else {
+          // 기존 사용자: 0.8초 스플래시 후 홈으로
+          console.log('✅ 기존 사용자 - 스플래시 표시');
+          this.showSplash = true;
+          setTimeout(() => {
+            this.goToHome();
+          }, 800);
+        }
+        
+      } catch (error) {
+        console.error('❌ 콜백 처리 오류:', error);
+        this.error = error.message || '로그인 처리 중 오류가 발생했습니다.';
+        this.loading = false;
+      }
+    },
+    
+    async fetchUserInfo(token) {
+      const response = await fetch('http://localhost:8000/api/v1/auth/social/login/me/', {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('사용자 정보를 가져올 수 없습니다.');
+      }
+      
+      return await response.json();
+    },
+    
+    startCountdown() {
+      this.countdownInterval = setInterval(() => {
+        this.countdown--;
+        if (this.countdown <= 0) {
+          clearInterval(this.countdownInterval);
+          this.goToHome();
+        }
+      }, 1000);
+    },
+    
+    goToHome() {
+      // 스플래시가 페이드 아웃되고 바로 홈으로 이동
+      this.$router.push('/home');
+    },
+    
+    goToWelcome() {
+      // 실패 시 Welcome 페이지로
+      this.$router.push('/welcome');
+    }
+  }
+}
+</script>
+
+<style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ============ 스플래시 스크린 ============ */
+.splash-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeSplash 1.8s ease forwards;
+}
+
+@keyframes fadeSplash {
+  0% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.splash-logo {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  animation: scaleIn 0.6s ease;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.callback-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============ 로딩 (로고 포함) ============ */
+.loading {
+  text-align: center;
+  color: white;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.loading-logo {
+  width: 150px;
+  height: auto;
+  margin-bottom: 30px;
+  animation: pulse 2s ease-in-out infinite;
+  filter: brightness(0) invert(1); /* 로고를 흰색으로 */
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.loading-spinner {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-left-color: white;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  opacity: 0.9;
+}
+
+/* ============ 환영 메시지 ============ */
+.welcome {
+  background: white;
+  padding: 60px 40px;
+  border-radius: 30px;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  animation: bounce 1s ease;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.welcome h1 {
+  font-size: 32px;
+  color: #333;
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+
+.user-name {
+  font-size: 24px;
+  color: #667eea;
+  margin: 10px 0;
+  font-weight: 700;
+}
+
+.welcome-text {
+  font-size: 16px;
+  color: #666;
+  margin: 20px 0 40px;
+  line-height: 1.6;
+}
+
+.start-button {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 15px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.start-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.start-button:active {
+  transform: translateY(0);
+}
+
+.auto-redirect {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #999;
+}
+
+/* ============ 에러 ============ */
+.error {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  border: 2px solid #ff4444;
+  max-width: 400px;
+  width: 100%;
+  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.error-icon {
+  font-size: 60px;
+  margin-bottom: 20px;
+}
+
+.error h2 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.error p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.error button {
+  padding: 12px 30px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.error button:hover {
+  background: #5568d3;
+}
+
+/* ============ 모바일 대응 ============ */
+@media (max-width: 480px) {
+  .loading-logo {
+    width: 120px;
+  }
+  
+  .welcome {
+    padding: 40px 30px;
+  }
+  
+  .welcome h1 {
+    font-size: 28px;
+  }
+  
+  .user-name {
+    font-size: 20px;
+  }
+  
+  .welcome-text {
+    font-size: 14px;
+  }
+  
+  .start-button {
+    padding: 16px;
+    font-size: 16px;
+  }
+}
+</style>

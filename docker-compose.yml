@@ -11,6 +11,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data/ # 데이터 영속성 유지
+    ports:
+      - "5432:5432"
     restart: unless-stopped
 
   web:
