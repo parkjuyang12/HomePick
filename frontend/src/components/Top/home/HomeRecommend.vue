@@ -17,7 +17,7 @@
           <img :src="item.icon" class="card-image" alt="추천 매물" />
           <div class="card-overlay">
             <span class="badge">추천</span>
-            <div class="image-label">#보험 상품</div>
+            <!-- <div class="image-label">#보험 상품</div> -->
           </div>
         </div>
         
@@ -78,7 +78,7 @@ const recommends = [
 
 <style scoped>
 .recommend-section {
-  padding: 24px 0;
+  padding: 15px 0;
   background: #ffffff;
 }
 
@@ -246,6 +246,7 @@ const recommends = [
 }
 
 .show-more-btn {
+  height: 45%;
   width: 100%;
   padding: 16px;
   border: 2px solid #e5e5ea;

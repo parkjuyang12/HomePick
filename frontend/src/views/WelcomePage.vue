@@ -98,20 +98,21 @@ export default {
 
 
 .logo-area {
-    padding: 20px 0 10px;
+    padding: 16px 0 10px;
     flex-shrink: 0;
-    animation: fadeIn 0.6s ease;
+    animation: fadeIn 3s ease;
+
 }
 
 .logo {
-    width: 250px;
+    width: 180px;
     height: auto;
     object-fit: contain;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0.1; }
+    to { opacity: 0.8; }
 }
 
 .content-area {
