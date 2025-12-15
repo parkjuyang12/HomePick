@@ -48,6 +48,68 @@ services:
     depends_on:
       - web
 
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/data
+      - zookeeper_datalog:/datalog
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    depends_on:
+      - zookeeper
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  flink-jobmanager:
+    build:
+      context: ./flink
+      dockerfile: Dockerfile
+    container_name: flink_jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    depends_on:
+      - kafka
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+      - flink_savepoints:/opt/flink/savepoints
+      - flink_logs:/opt/flink/log
+
+  flink-taskmanager:
+    build:
+      context: ./flink
+      dockerfile: Dockerfile
+    container_name: flink_taskmanager
+    command: taskmanager
+    depends_on:
+      - flink-jobmanager
+    volumes:
+      - flink_checkpoints:/opt/flink/checkpoints
+      - flink_savepoints:/opt/flink/savepoints
+      - flink_logs:/opt/flink/log
+
 # 데이터 볼륨 정의
 volumes:
   postgres_data:
+  zookeeper_data:
+  zookeeper_datalog:
+  kafka_data:
+  flink_checkpoints:
+  flink_savepoints:
+  flink_logs:
