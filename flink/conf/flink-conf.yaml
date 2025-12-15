@@ -6,6 +6,6 @@ jobmanager.heap.size: 1024m
 taskmanager.heap.size: 1024m
 taskmanager.numberOfTaskSlots: 2
 parallelism.default: 2
-state.backend: filesystem
+state.backend: rocksdb
 state.checkpoints.dir: file:///opt/flink/checkpoints
 state.savepoints.dir: file:///opt/flink/savepoints
