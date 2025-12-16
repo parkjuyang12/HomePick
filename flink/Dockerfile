@@ -1,9 +1,22 @@
-# HomePick/flink/Dockerfile
-# Flink base image for local JobManager/TaskManager.
-FROM flink:1.17.2-scala_2.12-java11
+FROM flink:1.18.1-scala_2.12-java11
 
-WORKDIR /opt/flink
+USER root
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    curl \
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && rm -rf /var/lib/apt/lists/*
 
-# 기본 설정 복사. 필요 시 compose 환경변수로 덮어쓰기 가능.
-COPY conf/flink-conf.yaml /opt/flink/conf/flink-conf.yaml
-COPY conf/log4j-console.properties /opt/flink/conf/log4j-console.properties
+# Flink Kafka Connector (1.18 대응)
+RUN curl -fSL \
+    https://repo1.maven.org/maven2/org/apache/flink/flink-connector-kafka/3.0.1-1.18/flink-connector-kafka-3.0.1-1.18.jar \
+    -o /opt/flink/lib/flink-connector-kafka.jar
+
+# Kafka Client (OffsetResetStrategy 포함)
+RUN curl -fSL \
+    https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1.jar \
+    -o /opt/flink/lib/kafka-clients.jar
+
+RUN chown flink:flink /opt/flink/lib/*.jar
+USER flink
