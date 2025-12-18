@@ -79,11 +79,13 @@ services:
 
   kafka-producer:
     build:
-      context: ./kafka-producer
+      context: ./transaction-kafka-producer
     container_name: kafka_producer
     depends_on:
       - kafka
-    restart: "no"
+    env_file:
+      - ./transaction-kafka-producer/.env
+    restart: unless-stopped
 
   # ------------------------
   # Flink Session Cluster
