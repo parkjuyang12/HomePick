@@ -172,6 +172,17 @@ services:
     depends_on:
       - elasticsearch
 
+  # ------------------------
+  # Geo-Enricher
+  # ------------------------
+  geo-enricher:
+    build:
+      context: ./geo-enricher
+    container_name: geo_enricher
+    env_file:
+      - .env
+    restart: unless-stopped
+
 # ------------------------
 # Volumes
 # ------------------------
