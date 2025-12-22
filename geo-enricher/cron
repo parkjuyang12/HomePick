@@ -1,0 +1,3 @@
+# 매 5분마다 실행 (PROJECT_ROOT/.env 사용)
+# 예: crontab 상단에 PROJECT_ROOT=/Users/yourname/path/to/HomePick 설정
+*/5 * * * * cd "$PROJECT_ROOT" && docker run --rm --env-file "$PROJECT_ROOT/.env" geo-enricher:latest
