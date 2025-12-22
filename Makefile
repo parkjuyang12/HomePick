@@ -105,7 +105,7 @@ nuke:
 run-flink:
 	docker exec -it flink_jobmanager \
 	/opt/flink/bin/flink run \
-	-py /opt/flink/job/job_test.py
+	-py /opt/flink/job/transaction-job.py
 
 logs-flink:
 	docker logs -f flink_jobmanager

@@ -218,3 +218,31 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# =====================
+# kafka 임시 강제 실행 명령어
+# bash창에 복사해서 붙여넣기
+# =====================
+
+# 최초 토픽 생성
+'''
+docker exec kafka kafka-topics --bootstrap-server kafka:9092 --create --topic realestate.apartment   --partitions 1 --replication-factor 1 || true
+docker exec kafka kafka-topics --bootstrap-server kafka:9092 --create --topic realestate.house       --partitions 1 --replication-factor 1 || true
+docker exec kafka kafka-topics --bootstrap-server kafka:9092 --create --topic realestate.officetel   --partitions 1 --replication-factor 1 || true
+docker exec kafka kafka-topics --bootstrap-server kafka:9092 --create --topic realestate.commercial  --partitions 1 --replication-factor 1 || true
+# 확인
+docker exec kafka kafka-topics --bootstrap-server kafka:9092 --list
+'''
+# docker exec -it kafka_producer python /app/main.py
+
+# 토픽 목록
+# docker exec -it kafka kafka-topics --bootstrap-server kafka:9092 --list
+
+# 특정 토픽 메시지 확인
+'''
+docker exec -it kafka kafka-console-consumer \
+  --bootstrap-server kafka:9092 \
+  --topic realestate.apartment \
+  --from-beginning
+'''

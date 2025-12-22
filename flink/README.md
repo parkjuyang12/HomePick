@@ -5,20 +5,6 @@
 | Flink Cluster | **플랫폼 / 실행 환경**  |
 | Flink Job     | **비즈니스 로직 (코드)** |
 
-```
-flink/
-├── conf/          → Flink 설정
-│   ├── flink-conf.yaml
-│   └── log4j-console.properties
-│
-├── Dockerfile      → JobManager /TaskManager 이미지
-│
-└── job/           → PyFlink 코드 (Kafka 읽는 로직)
-    ├── Dockerfile
-    ├── requirements.txt
-    └── job.py
-```
-
 ## 해당 구조로 나누는 이유
 
 ### 생명주기의 차이
@@ -62,3 +48,23 @@ CPU / 메모리 / 슬롯 보유
 Kafka 읽고, 처리하고, 쓰는 로직
 
     👉 “업무 지시서”
+
+# =====================
+
+## Flink 처리 흐름
+```
+Kafka (거래 이벤트)
+        │
+        ▼
+Parse (JSON)
+        │
+        ▼
+Map: 거래 → (property_id 생성)
+        │
+        ▼
+keyBy(property_id)
+        │
+        ├─▶ current_property_stream  (UPDATE)
+        │
+        └─▶ trade_history_stream     (APPEND)
+```
