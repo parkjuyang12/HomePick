@@ -20,7 +20,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 COPY . /app/
 
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["sh", "/usr/local/bin/entrypoint.sh"]
 
 # docker-compose.yml에서 이 명령을 덮어씁니다.
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

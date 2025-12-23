@@ -1,5 +1,7 @@
+# chatbot/urls.py
 from django.urls import path
+from .views import ChatbotView
 
 urlpatterns = [
-    # POST /chatbot/query
+    path("", ChatbotView.as_view()),
 ]
