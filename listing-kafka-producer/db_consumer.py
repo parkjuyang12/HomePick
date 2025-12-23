@@ -1,14 +1,18 @@
 import json
+import os
 import psycopg2
 from kafka import KafkaConsumer
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ======================
 # 설정
 # ======================
 DB_CONFIG = {
-    'dbname': 'HomePick',
-    'user': 'admin',
-    'password': '1234',
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
     'host': 'localhost',
     'port': '5432'
 }
@@ -26,9 +30,15 @@ TOPIC_NAME = 'zigbang-listings-raw'
 
 INSERT_SQL = """
     INSERT INTO listings 
-    (item_id, area_ho_id, title, address_local2, address_local3, lat, lng)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (item_id) DO NOTHING;
+    (item_id, area_ho_id, title, address_local2, address_local3, lat, lng, deposit, rent)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (item_id) 
+    DO UPDATE SET
+        title = EXCLUDED.title,
+        deposit = EXCLUDED.deposit,
+        rent = EXCLUDED.rent,
+        lat = EXCLUDED.lat,
+        lng = EXCLUDED.lng;
 """
 
 # ======================
@@ -58,9 +68,11 @@ def run_db_consumer():
             local3 = data.get('local3', '')
             lat = data.get('lat', 0.0)
             lng = data.get('lng', 0.0)
+            deposit = data.get('depositMin', 0)
+            rent = data.get('rentMin', 0)
 
             try:
-                cur.execute(INSERT_SQL, (item_id, area_ho_id, title, local2, local3, lat, lng))
+                cur.execute(INSERT_SQL, (item_id, area_ho_id, title, local2, local3, lat, lng, deposit, rent))
                 conn.commit()
 
                 # rowcount: 1(삽입 성공), 0(중복 무시)
