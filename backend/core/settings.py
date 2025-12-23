@@ -61,7 +61,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # 앱 및 DRF
-    'apartment',
     'rest_framework',
     
     # allauth
