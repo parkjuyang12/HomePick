@@ -10,11 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-GOOGLE_MAPS_API_KEY = env('GOOGLE_MAPS_API_KEY')
+GOOGLE_MAPS_API_KEY = os.environ.get("GOOGLE_MAPS_API_KEY")
 
 # Quick-start development settings - unsuitable for production
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -60,7 +60,6 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 INSTALLED_APPS = [
     'django.contrib.admin',
-    'users',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -68,6 +67,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # 앱 및 DRF
+    'chatbot',
+    'map',
+    'properties',
+    'users',
     'rest_framework',
     
     # allauth
