@@ -1,5 +1,5 @@
 # HomePick/backend/Dockerfile
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # 시스템 패키지 설치: netcat(DB 대기), PostgreSQL client libraries (psycopg2 필요)
 RUN apt-get update \
