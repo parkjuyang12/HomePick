@@ -14,7 +14,6 @@
       </div>
       
       <div class="home-indicator"></div>
-      
      
       <div class="side-buttons">
         <div class="volume-up"></div>
@@ -124,20 +123,19 @@ html, body {
     border-radius: 3px;
 }
 
-
-
-
-
 .home-indicator {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 150px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 3px;
-    z-index: 10;
+  position: absolute;         
+  bottom: 20px;             /* 하단 여백 */
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 180px;
+  height: 5px;
+  background: rgba(5, 5, 5, 0.5);
+  border-radius: 3px;
+
+  z-index: 999;             /* 앱 UI 위에 */
+  pointer-events: none;     /* 클릭 방해 안 함 */
 }
 
 
