@@ -48,6 +48,10 @@ const routes = [
     name: 'More',
     component: () => import('../views/MorePage.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: "/chatbot",
+    component: () => import("@/views/ChatbotPage.vue")
   }
 ];
 

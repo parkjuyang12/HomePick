@@ -16,4 +16,7 @@ urlpatterns = [
 
     # 지도
     path("api/map/", include("map.urls")),
+
+    # 챗봇
+    path("api/chatbot/", include("chatbot.urls")),
 ]

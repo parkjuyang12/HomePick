@@ -34,6 +34,7 @@ services:
       DJANGO_DB_PASSWORD: ${DB_PASSWORD}
       DJANGO_DB_HOST: db
       DJANGO_DB_PORT: 5432
+      GMS_API_KEY: ${GMS_API_KEY}
     depends_on:
       - db
 
