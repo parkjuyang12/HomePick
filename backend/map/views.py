@@ -3,6 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.conf import settings
+from django.http import JsonResponse
+from django.db.models import F, FloatField, ExpressionWrapper
+from django.db.models.functions import ACos, Cos, Radians, Sin
+from properties.models import Property
 from .utils import GoogleMapClient
 
 class MapConfigView(APIView):
@@ -35,3 +39,39 @@ class GeocodeView(APIView):
             "lat": lat,
             "lng": lng
         }, status=status.HTTP_200_OK)
+
+def search_nearby_properties(request):
+    address = request.GET.get('address')
+    radius = float(request.GET.get('radius', 2))
+
+    # utils.py를 사용하여 주소를 좌표로 변환
+    client = GoogleMapClient()
+    lat, lng = client.get_lat_lng(address)
+
+    # Haversine 공식을 이용한 DB 쿼리 필터링 (6371은 지구 반지름 km)
+    distance_formula = 6371 * ACos(
+        Cos(Radians(lat)) * Cos(Radians(F('lat'))) *
+        Cos(Radians(F('lng')) - Radians(lng)) +
+        Sin(Radians(lat)) * Sin(Radians(F('lat')))
+    )
+
+    # 반경 내 매물 필터링
+    nearby_list = Property.objects.annotate(
+        distance=ExpressionWrapper(distance_formula, output_field=FloatField())
+    ).filter(distance__lte=radius).order_by('distance')
+
+    # 결과 반환
+    results = [
+        {
+            'id': p.id,
+            'title': p.title,
+            'lat': p.lat,
+            'lng': p.lng,
+            'distance': round(p.distance, 2)
+        } for p in nearby_list
+    ]
+
+    return JsonResponse({
+        'center': {'lat': lat, 'lng': lng},
+        'results': results
+    })
