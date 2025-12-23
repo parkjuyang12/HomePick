@@ -13,4 +13,7 @@ urlpatterns = [
     
     # allauth
     path('accounts/', include('allauth.urls')),
+
+    # 지도
+    path("api/map/", include("map.urls")),
 ]

@@ -1,1 +1,0 @@
-confluent-kafka==2.3.0 # Kafka 공식 C 기반 클라이언트

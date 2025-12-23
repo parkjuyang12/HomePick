@@ -61,6 +61,9 @@ services:
     container_name: zookeeper
     ports:
       - "2181:2181"
+    volumes:
+      - zk-data:/data
+      - zk-datalog:/datalog
 
   kafka:
     image: confluentinc/cp-kafka:7.6.1
@@ -70,20 +73,29 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      # KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # docker-compose.yml의 일부
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     depends_on:
       - zookeeper
 
   kafka-producer:
     build:
-      context: ./kafka-producer
+      context: ./transaction-kafka-producer
     container_name: kafka_producer
     depends_on:
       - kafka
-    restart: "no"
+    env_file:
+      - ./transaction-kafka-producer/.env
+    restart: unless-stopped
 
   # ------------------------
   # Flink Session Cluster
@@ -101,8 +113,10 @@ services:
         jobmanager.rpc.address: flink-jobmanager
         jobmanager.memory.process.size: 1024m
         parallelism.default: 2
+      - PYTHONPATH=/opt/homepick/flink:/opt/flink/job
     volumes:
       - ./flink/job:/opt/flink/job
+      - ./flink:/opt/homepick/flink
       - flink_checkpoints:/opt/flink/checkpoints
       - flink_savepoints:/opt/flink/savepoints
 
@@ -119,7 +133,9 @@ services:
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.memory.process.size: 1024m
         taskmanager.numberOfTaskSlots: 2
+      - PYTHONPATH=/opt/homepick/flink:/opt/flink/job
     volumes:
+      - ./flink:/opt/homepick/flink
       - flink_checkpoints:/opt/flink/checkpoints
       - flink_savepoints:/opt/flink/savepoints
 
@@ -148,11 +164,37 @@ services:
     volumes:
       - es_data:/usr/share/elasticsearch/data
 
+  # ------------------------
+  # Kibana
+  # ------------------------
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.13
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+
+  # ------------------------
+  # Geo-Enricher
+  # ------------------------
+  geo-enricher:
+    build:
+      context: ./geo-enricher
+    container_name: geo_enricher
+    env_file:
+      - .env
+    restart: unless-stopped
+
 # ------------------------
 # Volumes
 # ------------------------
 volumes:
   postgres_data:
+  zk-data:
+  zk-datalog:
   kafka_data:
   flink_checkpoints:
   flink_savepoints:
