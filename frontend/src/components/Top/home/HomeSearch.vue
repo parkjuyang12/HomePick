@@ -1,86 +1,19 @@
-<!-- <template>
-  <div class="search-wrapper">
-    <input 
-      type="text" 
-      placeholder="지역, 지하철, 대학교 검색"
-      class="search-input"
-    />
-    <button class="search-btn">
-      🔍
-    </button>
-  </div>
-</template>
-
-<script setup></script>
-
-<style scoped>
-.search-wrapper {
-  display: flex;
-  align-items: center;
-
-  margin: 0 20px;
-  padding: 10px 14px;
-
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1.5px solid #d0d7df;
-
-  /* 소프트 그림자 (고급 앱 느낌) */
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-
-  transition: border 0.2s ease;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  font-size: 16px;
-  outline: none;
-  padding-left: 4px;
-
-  color: #333;
-}
-
-.search-input::placeholder {
-  color: #B0B7C3;
-}
-
-.search-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  outline: none;
-  cursor: pointer;
-  border-radius: 50%;
-
-  background: #2DCDB1;
-  color: white;
-  font-size: 18px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  transition: background 0.2s ease;
-}
-
-.search-btn:active {
-  background: #1fb79d;
-}
-</style> -->
-
 <template>
   <div class="search-container">
     <div class="search-wrapper">
-      <svg class="icon" viewBox="0 0 24 24">
-        <circle cx="11" cy="11" r="6" stroke="#b0b8c1" stroke-width="2" fill="none"/>
-        <line x1="16" y1="16" x2="21" y2="21" stroke="#b0b8c1" stroke-width="2" />
-      </svg>
+      <button class="search-icon-btn" @click="handleSearch">
+        <svg class="icon" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="6" stroke="#b0b8c1" stroke-width="2" fill="none"/>
+          <line x1="16" y1="16" x2="21" y2="21" stroke="#b0b8c1" stroke-width="2" />
+        </svg>
+      </button>
 
       <input 
+        v-model="searchQuery"
         type="text" 
         placeholder="지역, 지하철, 대학교 검색"
         class="search-input"
+        @keyup.enter="handleSearch"
       />
 
       <div class="divider"></div>
@@ -97,9 +30,22 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, defineEmits } from 'vue';
 
+const searchQuery = ref('');
 const isLocating = ref(false);
+
+// 부모(HomePage)에게 이벤트를 보내기 위한 정의
+const emit = defineEmits(['search']);
+
+const handleSearch = () => {
+  if (!searchQuery.value.trim()) {
+    alert('검색어를 입력해주세요.');
+    return;
+  }
+  // 부모 컴포넌트로 검색어 전달
+  emit('search', searchQuery.value);
+};
 
 const getCurrentLocation = async () => {
   if (!navigator.geolocation) {
@@ -113,9 +59,9 @@ const getCurrentLocation = async () => {
     (position) => {
       const { latitude, longitude } = position.coords;
       console.log('현재 위치:', { latitude, longitude });
-      // 여기서 위치를 기반으로 검색 수행
+      // 현재 위치의 경우 좌표를 문자열로 만들어 전달하거나 별도 로직 처리 가능
+      emit('search', `${latitude.toFixed(6)},${longitude.toFixed(6)}`);
       isLocating.value = false;
-      alert(`위도: ${latitude.toFixed(4)}, 경도: ${longitude.toFixed(4)}`);
     },
     (error) => {
       console.error('위치 조회 실패:', error);
@@ -143,8 +89,18 @@ const getCurrentLocation = async () => {
 }
 
 .search-wrapper:focus-within {
-  background: #ffffff;
   box-shadow: 0 1px 4px rgba(24, 144, 255, 0.15);
+}
+
+/* 검색 아이콘 버튼 스타일 */
+.search-icon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon {
@@ -189,21 +145,9 @@ const getCurrentLocation = async () => {
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  margin-left: 0;
 }
 
-.location-btn:hover:not(:disabled) {
-  transform: scale(1.05);
-}
-
-.location-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.location-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+.location-btn:hover:not(:disabled) { transform: scale(1.05); }
+.location-btn:active:not(:disabled) { transform: scale(0.95); }
+.location-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
-
-

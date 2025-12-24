@@ -18,7 +18,7 @@
             <span>활성 매물</span>
           </div>
           <div class="stat">
-            <strong>종로구 청운효자동</strong>
+            <strong>{{ currentAddress || '종로구 청운효자동' }}</strong>
             <span>현재 위치</span>
           </div>
         </div>
@@ -28,7 +28,12 @@
       <div class="map-toolbar">
         <label class="search">
           <span class="search-icon">⌕</span>
-          <input type="text" placeholder="지역이나 지하철역을 검색해보세요" />
+          <input 
+            type="text" 
+            v-model="localSearchQuery" 
+            placeholder="지역이나 지하철역을 검색해보세요" 
+            @keyup.enter="handleLocalSearch"
+          />
         </label>
         <button class="ghost" type="button">필터</button>
         <button class="ghost" type="button">반경 2km</button>
@@ -44,8 +49,18 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'MapPage',
+  data() {
+    return {
+      map: null,
+      markers: [],
+      currentAddress: '',
+      localSearchQuery: '',
+    };
+  },
   mounted() {
     // 구글 맵 API 스크립트가 로드되었는지 확인 후 실행합니다.
     if (window.google && window.google.maps) {
@@ -55,9 +70,20 @@ export default {
       setTimeout(() => this.initMap(), 1000);
     }
   },
+  // [추가] URL의 검색어가 변경될 때마다 지도를 업데이트합니다.
+  watch: {
+    '$route.query.address': {
+      handler(newAddress) {
+        if (newAddress && this.map) {
+          this.fetchNearbyProperties(newAddress);
+        }
+      },
+      immediate: false
+    }
+  },
   methods: {
     initMap() {
-      const map = new window.google.maps.Map(this.$refs.mapElement, {
+      this.map = new window.google.maps.Map(this.$refs.mapElement, {
         center: { lat: 37.5665, lng: 126.9780 },
         zoom: 12,
         mapTypeControl: false,
@@ -65,34 +91,75 @@ export default {
         streetViewControl: false,
         clickableIcons: false,
         gestureHandling: "greedy",
-        // 기본 지도 색 유지
       });
 
-      // 테스트용 가짜 데이터 (나중에 백엔드에서 받아올 데이터 구조)
-      const locations = [
-        { title: "매물 1", lat: 37.5665, lng: 126.9780 },
-        { title: "매물 2", lat: 37.5700, lng: 126.9800 },
-        { title: "매물 3", lat: 37.5600, lng: 126.9700 },
-      ];
+      // [수정] 초기 로드 시 URL에 검색어가 있다면 해당 위치로 이동합니다.
+      const initialAddress = this.$route.query.address;
+      if (initialAddress) {
+        this.fetchNearbyProperties(initialAddress);
+      }
+    },
 
-      const markerIcon = {
-        path: window.google.maps.SymbolPath.CIRCLE,
-        fillColor: "#1d4ed8",
-        fillOpacity: 1,
-        strokeColor: "#ffffff",
-        strokeWeight: 2,
-        scale: 8
-      };
-
-      // 반복문을 돌며 마커 생성
-      locations.forEach(loc => {
-        new window.google.maps.Marker({
-          position: { lat: loc.lat, lng: loc.lng },
-          map: map,
-          title: loc.title,
-          icon: markerIcon
+    // [추가] 백엔드 API와 통신하여 좌표를 받고 지도를 이동시키는 핵심 로직
+    async fetchNearbyProperties(address) {
+      try {
+        this.currentAddress = address;
+        const response = await axios.get('http://localhost:8000/api/map/search/', {
+          params: { address: address }
         });
+
+        const { center, results } = response.data;
+
+        if (center) {
+          // 1. 지도의 중심을 검색된 위치로 이동
+          const newCenter = new window.google.maps.LatLng(center.lat, center.lng);
+          this.map.setCenter(newCenter);
+          this.map.setZoom(15);
+
+          // 2. 마커 표시
+          this.renderMarkers(results);
+        }
+      } catch (error) {
+        console.error("데이터를 불러오는 중 오류 발생:", error);
+      }
+    },
+
+    // [추가] 받아온 매물 데이터를 지도에 마커로 렌더링
+    renderMarkers(properties) {
+      // 기존 마커 제거
+      this.markers.forEach(marker => marker.setMap(null));
+      this.markers = [];
+
+      properties.forEach(prop => {
+        // [업무 2 반영] 자산 유형에 따른 마커 커스텀 (이미지 경로 설정 필요)
+        let iconPath = null;
+        if (prop.asset_type === 'APARTMENT') {
+          // 커스텀 아이콘 사용 시 예시: iconPath = '/img/marker_apt.png';
+        }
+
+        const marker = new window.google.maps.Marker({
+          position: { lat: prop.lat, lng: prop.lng },
+          map: this.map,
+          title: prop.title,
+          // 커스텀 아이콘이 없으면 기본 원형 심볼 유지
+          icon: iconPath || {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: prop.asset_type === 'COMMERCIAL' ? "#22c0a6" : "#1d4ed8",
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+            scale: 8
+          }
+        });
+        this.markers.push(marker);
       });
+    },
+
+    // 지도 페이지 내 검색창 엔터 처리
+    handleLocalSearch() {
+      if (this.localSearchQuery) {
+        this.$router.push({ query: { address: this.localSearchQuery } });
+      }
     }
   }
 }
