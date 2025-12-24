@@ -7,7 +7,7 @@ class ESPropertyClient():
     def __init__(self):
         self.client = Elasticsearch(ES_HOST)
 
-    def search_nearby(self, lat, lng, radius_km=2, category=None):
+    def search_nearby(self, lat, lng, radius_km=5, category=None):
         """
         - lat, lng: 검색어 중심 좌표
         - radius_km: 검색 반경 (km)
@@ -32,3 +32,23 @@ class ESPropertyClient():
 
         response = self.client.search(index=index_name, body=query, size=500)
         return response['hits']['hits']
+
+    def get_display_name(self, property_id):
+        if not property_id:
+            return None
+        query = {
+            "query": {
+                "term": {
+                    "property_id.keyword": property_id
+                }
+            }
+        }
+        try:
+            response = self.client.search(index="realestate_current_*", body=query, size=1)
+        except Exception:
+            return None
+        hits = response.get('hits', {}).get('hits', [])
+        if not hits:
+            return None
+        source = hits[0].get('_source', {})
+        return source.get('address', {}).get('display')

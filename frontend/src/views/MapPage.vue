@@ -95,13 +95,19 @@ export default {
       };
       this.map = new window.google.maps.Map(this.$refs.mapElement, mapOptions);
       this.updateMarkerScale(this.map.getZoom());
+      const restored = this.restoreMapState();
       this.map.addListener('zoom_changed', () => {
         this.updateMarkerScale(this.map.getZoom());
         if (this.lastResults.length) {
           this.renderBubbleMarkers(this.lastResults);
         }
       });
-      this.handleInitialLoad(this.$route.query.address, this.$route.query.category);
+      this.map.addListener('dragend', () => {
+        this.persistMapState();
+      });
+      if (!restored) {
+        this.handleInitialLoad(this.$route.query.address, this.$route.query.category);
+      }
     },
 
     // [수정] 진입 시 검색어 유무에 따른 로직 분기 (실제 사용자 위치 반영)
@@ -161,6 +167,7 @@ export default {
           this.map.setZoom(15);
           this.lastResults = results;
           this.renderBubbleMarkers(results);
+          this.persistMapState();
         }
       } catch (error) {
         console.error("Fetch Error:", error);
@@ -199,6 +206,14 @@ export default {
             <div class="marker-tail"></div>
           `;
         }
+        div.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (isCluster) {
+            this.handleClusterClick(item);
+          } else {
+            this.handleMarkerClick(prop);
+          }
+        });
 
         const Overlay = function(pos, element, map) {
           this.pos = pos; this.element = element; this.setMap(map);
@@ -262,6 +277,16 @@ export default {
       const zoomBoost = Math.max(0, (zoom - 11) * 3);
       return Math.min(110, base + countBoost + zoomBoost);
     },
+    handleClusterClick(cluster) {
+      if (!this.map) return;
+      const nextZoom = Math.min((this.map.getZoom() || 14) + 2, 17);
+      this.map.setCenter(new window.google.maps.LatLng(cluster.lat, cluster.lng));
+      this.map.setZoom(nextZoom);
+    },
+    handleMarkerClick(prop) {
+      if (!prop || !prop.id) return;
+      this.$router.push({ path: `/property/${prop.id}` });
+    },
     updateMarkerScale(zoom) {
       if (!this.$refs.mapElement) return;
       const minZoom = 11;
@@ -269,6 +294,39 @@ export default {
       const clamped = Math.min(Math.max(zoom, minZoom), maxZoom);
       const scale = 0.78 + ((clamped - minZoom) / (maxZoom - minZoom)) * 0.5;
       this.$refs.mapElement.style.setProperty('--marker-scale', scale.toFixed(2));
+    },
+    persistMapState() {
+      if (!this.map) return;
+      const center = this.map.getCenter();
+      const state = {
+        center: center ? { lat: center.lat(), lng: center.lng() } : null,
+        zoom: this.map.getZoom(),
+        address: this.$route.query.address || '',
+        category: this.$route.query.category || '',
+        results: this.lastResults || [],
+      };
+      sessionStorage.setItem('map_state', JSON.stringify(state));
+    },
+    restoreMapState() {
+      const raw = sessionStorage.getItem('map_state');
+      if (!raw) return false;
+      try {
+        const state = JSON.parse(raw);
+        if (state.center && typeof state.center.lat === 'number' && typeof state.center.lng === 'number') {
+          this.map.setCenter(state.center);
+        }
+        if (typeof state.zoom === 'number') {
+          this.map.setZoom(state.zoom);
+        }
+        if (Array.isArray(state.results)) {
+          this.lastResults = state.results;
+          this.renderBubbleMarkers(state.results);
+        }
+        return true;
+      } catch (error) {
+        console.warn('Failed to restore map state', error);
+        return false;
+      }
     },
 
     formatPrice(price) {

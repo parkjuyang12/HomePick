@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny
 from django.conf import settings
 from django.http import JsonResponse
 from properties.utils import ESPropertyClient
+from properties.services.history import search_property_history
 from .utils import GoogleMapClient
 
 class MapConfigView(APIView):
@@ -73,4 +74,17 @@ def search_nearby_properties(request):
     return JsonResponse({
         'center': {'lat': lat, 'lng': lng},
         'results': results
+    })
+
+
+def property_history(request, property_id):
+    if not property_id:
+        return JsonResponse({'error': 'property_id is required.'}, status=400)
+
+    history = search_property_history(property_id)
+    display_name = ESPropertyClient().get_display_name(property_id)
+    return JsonResponse({
+        'property_id': property_id,
+        'display_name': display_name,
+        'history': history
     })
