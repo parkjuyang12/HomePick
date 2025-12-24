@@ -316,6 +316,7 @@ def build_current_doc(event, payload, deal_date, price, deposit, monthly_rent, c
         "trade_count": count,
         "address": build_current_address(event, payload),
         "detail": build_current_detail(event["asset_type"], payload),
+        "location": None,
 
         "updated_at": datetime.utcnow().isoformat(),
     }
