@@ -42,10 +42,14 @@ class GeocodeView(APIView):
 def search_nearby_properties(request):
     address = request.GET.get('address')
     category = request.GET.get('category')
-
+    if not address:
+        return JsonResponse({'error': 'Address parameter is required.'}, status=400)
     # utils.py를 사용하여 주소를 좌표로 변환
     geo_client = GoogleMapClient()
     lat, lng = geo_client.get_lat_lng(address)
+
+    if lat is None or lng is None:
+        return JsonResponse({'error': 'Failed to geocode address.'}, status=400)
 
     # ES에서 데이터 가져오기
     es_client = ESPropertyClient()
@@ -62,6 +66,7 @@ def search_nearby_properties(request):
             'lng': source.get('location', {}).get('lon'),
             'price': source.get('latest_trade', {}).get('price'),
             'asset_type': source.get('asset_type'), # Apartment/House/Commercial/Officetel
+            'transaction_type': source.get('latest_trade', {}).get('transaction_type'), # 매매/전세/월세
             'index': hit['_index'] # 아이콘 구분용
         })
 

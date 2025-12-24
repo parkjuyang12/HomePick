@@ -1,5 +1,8 @@
 from django.conf import settings
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 class GoogleMapClient:
     """
@@ -43,5 +46,11 @@ class GoogleMapClient:
             location = data['results'][0]['geometry']['location']
             return location['lat'], location['lng']
         else:
+            logger.warning(
+                "Geocode failed: status=%s, error_message=%s, address=%r",
+                data.get('status'),
+                data.get('error_message'),
+                address,
+            )
             return None, None
     

@@ -62,6 +62,7 @@ export default {
       markers: [],
       currentDisplayAddress: '',
       localSearchQuery: '',
+      lastResults: [],
     };
   },
   mounted() {
@@ -93,6 +94,13 @@ export default {
         gestureHandling: "greedy",
       };
       this.map = new window.google.maps.Map(this.$refs.mapElement, mapOptions);
+      this.updateMarkerScale(this.map.getZoom());
+      this.map.addListener('zoom_changed', () => {
+        this.updateMarkerScale(this.map.getZoom());
+        if (this.lastResults.length) {
+          this.renderBubbleMarkers(this.lastResults);
+        }
+      });
       this.handleInitialLoad(this.$route.query.address, this.$route.query.category);
     },
 
@@ -151,6 +159,7 @@ export default {
           const newPos = new window.google.maps.LatLng(center.lat, center.lng);
           this.map.setCenter(newPos);
           this.map.setZoom(15);
+          this.lastResults = results;
           this.renderBubbleMarkers(results);
         }
       } catch (error) {
@@ -162,17 +171,34 @@ export default {
       this.markers.forEach(m => m.setMap(null));
       this.markers = [];
 
-      properties.forEach(prop => {
+      const zoom = this.map ? this.map.getZoom() : 14;
+      const clustered = zoom <= 15 ? this.clusterProperties(properties, zoom) : null;
+      const items = clustered || properties;
+
+      items.forEach(item => {
+        const isCluster = !!item.isCluster;
+        const prop = item.sample || item;
         const priceLabel = this.formatPrice(prop.price);
         const typeClass = prop.asset_type ? prop.asset_type.toLowerCase() : 'default';
 
+        const sizeForCluster = isCluster ? this.getClusterSize(item.count, zoom) : null;
+
         const div = document.createElement('div');
-        div.className = `custom-bubble-marker ${typeClass}`;
-        div.innerHTML = `
-          <div class="marker-title">${prop.title}</div>
-          <div class="marker-price">${priceLabel}</div>
-          <div class="marker-tail"></div>
-        `;
+        if (isCluster) {
+          div.className = 'cluster-marker';
+          div.style.setProperty('--cluster-size', `${sizeForCluster}px`);
+          div.setAttribute('data-count', item.count);
+          div.innerHTML = `
+            <div class="cluster-count">${item.count}</div>
+          `;
+        } else {
+          div.className = `custom-bubble-marker ${typeClass}`;
+          div.innerHTML = `
+            <div class="marker-title">${prop.title}</div>
+            <div class="marker-price">${priceLabel}</div>
+            <div class="marker-tail"></div>
+          `;
+        }
 
         const Overlay = function(pos, element, map) {
           this.pos = pos; this.element = element; this.setMap(map);
@@ -188,9 +214,61 @@ export default {
         };
         Overlay.prototype.onRemove = function() { if (this.element.parentNode) this.element.parentNode.removeChild(this.element); };
 
-        const overlayInstance = new Overlay(new window.google.maps.LatLng(prop.lat, prop.lng), div, this.map);
+        const position = new window.google.maps.LatLng(item.lat, item.lng);
+        const overlayInstance = new Overlay(position, div, this.map);
         this.markers.push(overlayInstance);
       });
+    },
+    clusterProperties(properties, zoom) {
+      const bucketSize = this.getClusterBucketSize(zoom);
+      const buckets = new Map();
+
+      properties.forEach(prop => {
+        const keyLat = Math.floor(prop.lat / bucketSize);
+        const keyLng = Math.floor(prop.lng / bucketSize);
+        const key = `${keyLat},${keyLng}`;
+        const existing = buckets.get(key);
+        if (!existing) {
+          buckets.set(key, {
+            latSum: prop.lat,
+            lngSum: prop.lng,
+            count: 1,
+            sample: prop,
+          });
+        } else {
+          existing.latSum += prop.lat;
+          existing.lngSum += prop.lng;
+          existing.count += 1;
+        }
+      });
+
+      return Array.from(buckets.values()).map(bucket => ({
+        isCluster: true,
+        lat: bucket.latSum / bucket.count,
+        lng: bucket.lngSum / bucket.count,
+        count: bucket.count,
+        sample: bucket.sample,
+      }));
+    },
+    getClusterBucketSize(zoom) {
+      if (zoom <= 10) return 0.15; // ~15km
+      if (zoom <= 12) return 0.08; // ~8km
+      if (zoom <= 14) return 0.04; // ~4km
+      return 0.02; // ~2km up to zoom 15
+    },
+    getClusterSize(count, zoom) {
+      const base = 46;
+      const countBoost = Math.min(32, Math.log(count + 1) * 12);
+      const zoomBoost = Math.max(0, (zoom - 11) * 3);
+      return Math.min(110, base + countBoost + zoomBoost);
+    },
+    updateMarkerScale(zoom) {
+      if (!this.$refs.mapElement) return;
+      const minZoom = 11;
+      const maxZoom = 17;
+      const clamped = Math.min(Math.max(zoom, minZoom), maxZoom);
+      const scale = 0.78 + ((clamped - minZoom) / (maxZoom - minZoom)) * 0.5;
+      this.$refs.mapElement.style.setProperty('--marker-scale', scale.toFixed(2));
     },
 
     formatPrice(price) {
@@ -277,15 +355,74 @@ export default {
 
 :global(.custom-bubble-marker) {
   position: absolute;
-  padding: 8px 14px;
-  background: #1d4ed8;
-  color: white;
-  border-radius: 10px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-  border: 1.5px solid white;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #63b3ff, #3b6bff 55%, #1d4ed8 100%);
+  color: #f7fbff;
+  border-radius: 18px;
+  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.24);
+  border: none;
   text-align: center;
   z-index: 10;
   cursor: pointer;
+  transform: scale(var(--marker-scale, 1));
+  transform-origin: 50% 100%;
+  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+:global(.custom-bubble-marker:hover) {
+  box-shadow: 0 16px 30px rgba(17, 24, 39, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px) scale(var(--marker-scale, 1));
+}
+
+:global(.cluster-marker) {
+  position: absolute;
+  width: var(--cluster-size, 64px);
+  height: var(--cluster-size, 64px);
+  border-radius: 50%;
+  background: #1f4fd6;
+  opacity: 0.96;
+  color: #0f172a;
+  border: 1.2px solid rgba(255, 255, 255, 0.34);
+  box-shadow: 0 calc(var(--cluster-size, 64px) * 0.16) calc(var(--cluster-size, 64px) * 0.32) rgba(24, 39, 75, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--marker-scale, 1));
+  transform-origin: 50% 100%;
+  transition: transform 0.14s ease-out, box-shadow 0.18s ease-out;
+}
+
+:global(.cluster-marker)::before {
+  content: "";
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(31, 79, 214, 0.26) 0%, rgba(31, 79, 214, 0.12) 38%, rgba(31, 79, 214, 0) 70%);
+  z-index: 0;
+}
+
+:global(.cluster-marker)::after {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.32), transparent 60%);
+  z-index: 0;
+}
+
+:global(.cluster-count) {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-size: calc(var(--cluster-size, 64px) * 0.34);
+  letter-spacing: 0.01em;
+  color: #0f172a;
+}
+
+:global(.cluster-marker:hover) {
+  box-shadow: 0 calc(var(--cluster-size, 64px) * 0.32) calc(var(--cluster-size, 64px) * 0.58) rgba(29, 78, 216, 0.4),
+    0 0 0 calc(var(--cluster-size, 64px) * 0.15) rgba(59, 130, 246, 0.22);
+  transform: translateY(-2px) scale(var(--marker-scale, 1));
 }
 
 :global(.marker-title) {
@@ -309,9 +446,14 @@ export default {
   border-top-color: inherit;
 }
 
-:global(.custom-bubble-marker.apartment) { background-color: #1d4ed8; }
-:global(.custom-bubble-marker.commercial) { background-color: #22c0a6; }
-:global(.custom-bubble-marker.house) { background-color: #fbbf24; }
+:global(.custom-bubble-marker .marker-tail),
+:global(.cluster-marker .marker-tail) {
+  display: none;
+}
+
+:global(.custom-bubble-marker.apartment) { background: linear-gradient(135deg, #63b3ff, #3b6bff 55%, #1d4ed8 100%); }
+:global(.custom-bubble-marker.commercial) { background: linear-gradient(135deg, #4adeb5, #2bb48f 55%, #128569 100%); }
+:global(.custom-bubble-marker.house) { background: linear-gradient(135deg, #ffe082, #f6c84e 55%, #f59e0b 100%); }
 
 .map-legend { position: absolute; bottom: 16px; left: 16px; display: flex; gap: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(15, 31, 58, 0.86); color: #fff; font-size: 12px; z-index: 2; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
