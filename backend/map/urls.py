@@ -10,4 +10,10 @@ urlpatterns = [
     path('geocode/', views.GeocodeView.as_view(), name='map-geocode'),
 
     path('search/', search_nearby_properties, name='search_nearby'),
+    
+    # 건물별 상세조회
+    path('properties/<str:property_id>/history/',
+        views.PropertyHistoryView.as_view(),
+        name='map-property-history'
+    ),
 ]

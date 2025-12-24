@@ -8,6 +8,9 @@ from django.db.models import F, FloatField, ExpressionWrapper
 from django.db.models.functions import ACos, Cos, Radians, Sin
 from properties.models import Property
 from .utils import GoogleMapClient
+from properties.services.history import search_property_history
+
+es = Elasticsearch("http://elasticsearch:9200")
 
 class MapConfigView(APIView):
     """
@@ -75,3 +78,26 @@ def search_nearby_properties(request):
         'center': {'lat': lat, 'lng': lng},
         'results': results
     })
+
+
+class PropertyHistoryView(APIView):
+    """
+    마커클릭 -> property_id 기준 거래 이력 조회
+    """
+    def get(self, request, property_id):
+        query = {
+            "size": 1000,
+            "query": {
+                "term": {
+                    "property_id": property_id
+                }
+            },
+            "sort": [
+                {"deal_date": "desc"}
+            ]
+        }
+
+        res = es.search(index="realestate_history",body=query)
+
+        data = [hit["_source"] for hit in res["hits"]["hits"]]
+        return Response(data)
