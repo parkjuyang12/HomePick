@@ -34,10 +34,11 @@ def normalize_price(row):
         return price
 
 def search_property_history(property_id, size=1000):
+    property_id = property_id.rstrip(".")
     query = {
-        "query": {"term": {"property_id": property_id}},
+        "query": {"term": {"property_id.keyword": property_id}},
         "sort": [{"deal_date": "desc"}],
         "size": size,
     }
-    res = es.search(index="history", body=query)
+    res = es.search(index="realestate_history", body=query)
     return [hit["_source"] for hit in res["hits"]["hits"]]

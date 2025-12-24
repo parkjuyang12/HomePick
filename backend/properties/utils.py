@@ -27,8 +27,7 @@ class ESPropertyClient():
                         }
                     }
                 }
-            },
-            "size": 1000
+            }
         }
 
         response = self.client.search(index=index_name, body=query, size=500)
