@@ -18,12 +18,13 @@
             <span>활성 매물</span>
           </div>
           <div class="stat">
-            <strong>{{ currentAddress || '종로구 청운효자동' }}</strong>
+            <strong>{{ currentDisplayAddress || '지역을 검색하세요' }}</strong>
             <span>현재 위치</span>
           </div>
         </div>
       </div>
     </header>
+
     <section class="map-shell">
       <div class="map-toolbar">
         <label class="search">
@@ -35,14 +36,16 @@
             @keyup.enter="handleLocalSearch"
           />
         </label>
-        <button class="ghost" type="button">필터</button>
+        <button v-if="!$route.query.category" class="ghost" type="button">필터</button>
         <button class="ghost" type="button">반경 2km</button>
       </div>
+      
       <div id="map" ref="mapElement"></div>
-      <div class="map-legend">
-        <span class="legend-item"><i class="dot sale"></i>실거래</span>
-        <span class="legend-item"><i class="dot rent"></i>전세</span>
-        <span class="legend-item"><i class="dot lease"></i>월세</span>
+
+      <div v-if="!$route.query.category" class="map-legend">
+        <span class="legend-item"><i class="dot sale"></i>아파트</span>
+        <span class="legend-item"><i class="dot rent"></i>주택</span>
+        <span class="legend-item"><i class="dot lease"></i>상가건물</span>
       </div>
     </section>
   </div>
@@ -57,108 +60,157 @@ export default {
     return {
       map: null,
       markers: [],
-      currentAddress: '',
+      currentDisplayAddress: '',
       localSearchQuery: '',
     };
   },
   mounted() {
-    // 구글 맵 API 스크립트가 로드되었는지 확인 후 실행합니다.
     if (window.google && window.google.maps) {
       this.initMap();
     } else {
-      // 혹시 로드가 늦어질 경우를 대비해 1초 뒤 다시 시도합니다.
       setTimeout(() => this.initMap(), 1000);
     }
   },
-  // [추가] URL의 검색어가 변경될 때마다 지도를 업데이트합니다.
   watch: {
-    '$route.query.address': {
-      handler(newAddress) {
-        if (newAddress && this.map) {
-          this.fetchNearbyProperties(newAddress);
+    '$route.query': {
+      handler(newQuery) {
+        if (this.map) {
+          this.handleInitialLoad(newQuery.address, newQuery.category);
         }
       },
-      immediate: false
+      deep: true
     }
   },
   methods: {
     initMap() {
-      this.map = new window.google.maps.Map(this.$refs.mapElement, {
+      const mapOptions = {
         center: { lat: 37.5665, lng: 126.9780 },
-        zoom: 12,
+        zoom: 14,
         mapTypeControl: false,
         fullscreenControl: false,
         streetViewControl: false,
         clickableIcons: false,
         gestureHandling: "greedy",
-      });
+      };
+      this.map = new window.google.maps.Map(this.$refs.mapElement, mapOptions);
+      this.handleInitialLoad(this.$route.query.address, this.$route.query.category);
+    },
 
-      // [수정] 초기 로드 시 URL에 검색어가 있다면 해당 위치로 이동합니다.
-      const initialAddress = this.$route.query.address;
-      if (initialAddress) {
-        this.fetchNearbyProperties(initialAddress);
+    // [수정] 진입 시 검색어 유무에 따른 로직 분기 (실제 사용자 위치 반영)
+    async handleInitialLoad(address, category) {
+      console.log('📍 handleInitialLoad 호출:', { address, category });
+      
+      // 유효한 검색어가 있는 경우에만 검색
+      const hasValidAddress = address && typeof address === 'string' && address.trim().length > 0;
+      
+      if (hasValidAddress) {
+        console.log('🔍 검색어 있음 - 검색 실행:', address);
+        this.fetchNearbyProperties(address, category);
+      } else if (category) {
+        console.log('📱 카테고리만 있음 - 현재 위치 요청');
+        this.getCurrentLocationAndSearch(category);
+      } else {
+        console.log('⚠️ address와 category 모두 없음');
       }
     },
 
-    // [추가] 백엔드 API와 통신하여 좌표를 받고 지도를 이동시키는 핵심 로직
-    async fetchNearbyProperties(address) {
+    // [추가] 브라우저 Geolocation을 사용하여 사용자 위치 기반 검색
+    getCurrentLocationAndSearch(category) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            // 좌표를 문자열로 전달하여 백엔드에서 주소 변환 및 검색 수행
+            this.fetchNearbyProperties(`${lat},${lng}`, category);
+          },
+          () => {
+            // 위치 권한 거부 시 기본값 사용
+            this.fetchNearbyProperties('판교역', category);
+          }
+        );
+      } else {
+        this.fetchNearbyProperties('판교역', category);
+      }
+    },
+
+    async fetchNearbyProperties(address, category) {
       try {
-        this.currentAddress = address;
+        // 좌표가 들어온 경우(lat,lng) currentDisplayAddress를 '현재 위치'로 표시
+        this.currentDisplayAddress = address.includes(',') ? '현재 위치 주변' : address;
+        
         const response = await axios.get('http://localhost:8000/api/map/search/', {
-          params: { address: address }
+          params: { 
+            address: address,
+            category: category 
+          }
         });
 
         const { center, results } = response.data;
-
         if (center) {
-          // 1. 지도의 중심을 검색된 위치로 이동
-          const newCenter = new window.google.maps.LatLng(center.lat, center.lng);
-          this.map.setCenter(newCenter);
+          const newPos = new window.google.maps.LatLng(center.lat, center.lng);
+          this.map.setCenter(newPos);
           this.map.setZoom(15);
-
-          // 2. 마커 표시
-          this.renderMarkers(results);
+          this.renderBubbleMarkers(results);
         }
       } catch (error) {
-        console.error("데이터를 불러오는 중 오류 발생:", error);
+        console.error("Fetch Error:", error);
       }
     },
 
-    // [추가] 받아온 매물 데이터를 지도에 마커로 렌더링
-    renderMarkers(properties) {
-      // 기존 마커 제거
-      this.markers.forEach(marker => marker.setMap(null));
+    renderBubbleMarkers(properties) {
+      this.markers.forEach(m => m.setMap(null));
       this.markers = [];
 
       properties.forEach(prop => {
-        // [업무 2 반영] 자산 유형에 따른 마커 커스텀 (이미지 경로 설정 필요)
-        let iconPath = null;
-        if (prop.asset_type === 'APARTMENT') {
-          // 커스텀 아이콘 사용 시 예시: iconPath = '/img/marker_apt.png';
-        }
+        const priceLabel = this.formatPrice(prop.price);
+        const typeClass = prop.asset_type ? prop.asset_type.toLowerCase() : 'default';
 
-        const marker = new window.google.maps.Marker({
-          position: { lat: prop.lat, lng: prop.lng },
-          map: this.map,
-          title: prop.title,
-          // 커스텀 아이콘이 없으면 기본 원형 심볼 유지
-          icon: iconPath || {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            fillColor: prop.asset_type === 'COMMERCIAL' ? "#22c0a6" : "#1d4ed8",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
-            scale: 8
+        const div = document.createElement('div');
+        div.className = `custom-bubble-marker ${typeClass}`;
+        div.innerHTML = `
+          <div class="marker-title">${prop.title}</div>
+          <div class="marker-price">${priceLabel}</div>
+          <div class="marker-tail"></div>
+        `;
+
+        const Overlay = function(pos, element, map) {
+          this.pos = pos; this.element = element; this.setMap(map);
+        };
+        Overlay.prototype = new window.google.maps.OverlayView();
+        Overlay.prototype.onAdd = function() { this.getPanes().overlayMouseTarget.appendChild(this.element); };
+        Overlay.prototype.draw = function() {
+          const position = this.getProjection().fromLatLngToDivPixel(this.pos);
+          if (position) {
+            this.element.style.left = (position.x - (this.element.offsetWidth / 2)) + 'px';
+            this.element.style.top = (position.y - this.element.offsetHeight - 10) + 'px';
           }
-        });
-        this.markers.push(marker);
+        };
+        Overlay.prototype.onRemove = function() { if (this.element.parentNode) this.element.parentNode.removeChild(this.element); };
+
+        const overlayInstance = new Overlay(new window.google.maps.LatLng(prop.lat, prop.lng), div, this.map);
+        this.markers.push(overlayInstance);
       });
     },
 
-    // 지도 페이지 내 검색창 엔터 처리
+    formatPrice(price) {
+      if (!price) return "가격미정";
+      const eok = Math.floor(price / 100000000);
+      const man = Math.floor((price % 100000000) / 10000);
+      let res = "";
+      if (eok > 0) res += `${eok}억 `;
+      if (man > 0) res += `${man.toLocaleString()}`;
+      return res + "만";
+    },
+
     handleLocalSearch() {
-      if (this.localSearchQuery) {
-        this.$router.push({ query: { address: this.localSearchQuery } });
+      if (this.localSearchQuery.trim()) {
+        this.$router.push({ 
+          query: { 
+            address: this.localSearchQuery 
+            // 검색어로 검색 시에는 카테고리 필터를 제거하여 범례/필터 버튼이 다시 나오게 함
+          } 
+        });
       }
     }
   }
@@ -166,6 +218,7 @@ export default {
 </script>
 
 <style scoped>
+/* --- 기존 스타일 유지 --- */
 :global(:root) {
   --ink: #0f1f3a;
   --muted: #536380;
@@ -189,250 +242,89 @@ export default {
   overflow: hidden;
 }
 
-.map-page::before,
-.map-page::after {
-  content: "";
+.map-page::before, .map-page::after {
+  content: ""; position: absolute; width: 320px; height: 320px; border-radius: 50%; filter: blur(40px); opacity: 0.45; z-index: 0;
+}
+.map-page::before { top: -80px; right: -40px; background: radial-gradient(circle, #b7d0ff, transparent 70%); }
+.map-page::after { bottom: -120px; left: -60px; background: radial-gradient(circle, #c9ddff, transparent 70%); }
+
+.map-hero { display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; animation: rise 0.8s ease-out; }
+.title-block h1 { margin: 8px 0 10px; font-size: clamp(28px, 3.4vw, 38px); font-weight: 700; }
+.eyebrow { letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; color: var(--muted); }
+.logo-link { text-decoration: none; color: inherit; font-weight: 600; }
+.logo-link:hover { color: var(--accent); }
+.subtitle { margin: 0; font-size: 15px; color: var(--muted); }
+
+.hero-actions { display: flex; flex-direction: column; gap: 18px; }
+.chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip { border: 1px solid rgba(19, 33, 60, 0.15); background: rgba(255, 255, 255, 0.7); padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.chip.active { background: var(--accent); color: #fff; border-color: transparent; box-shadow: 0 12px 22px rgba(29, 78, 216, 0.35); }
+.chip:hover { transform: translateY(-1px); }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 14px; }
+.stat { background: var(--card); padding: 12px 16px; border-radius: 14px; box-shadow: var(--shadow); backdrop-filter: blur(12px); }
+.stat strong { display: block; font-size: 14px; }
+.stat span { font-size: 12px; color: var(--muted); }
+
+.map-shell { margin-top: 24px; position: relative; border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); background: var(--card); backdrop-filter: blur(12px); z-index: 1; animation: rise 0.9s ease-out; }
+.map-toolbar { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: center; padding: 8px; border-radius: 16px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 12px 34px rgba(29, 78, 216, 0.18); z-index: 2; }
+
+.search { display: flex; align-items: center; gap: 8px; flex: 1; background: #eef4ff; border-radius: 10px; padding: 8px 12px; color: var(--muted); }
+.search input { border: none; background: transparent; width: 100%; font-size: 12px; outline: none; color: var(--ink); font-family: inherit; }
+.ghost { border: none; background: #e9f1ff; padding: 8px 10px; border-radius: 10px; font-size: 12px; cursor: pointer; color: var(--ink); }
+
+#map { width: 100%; height: clamp(320px, 62vh, 560px); }
+
+:global(.custom-bubble-marker) {
   position: absolute;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.45;
-  z-index: 0;
-}
-
-.map-page::before {
-  top: -80px;
-  right: -40px;
-  background: radial-gradient(circle, #b7d0ff, transparent 70%);
-}
-
-.map-page::after {
-  bottom: -120px;
-  left: -60px;
-  background: radial-gradient(circle, #c9ddff, transparent 70%);
-}
-
-.map-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  position: relative;
-  z-index: 1;
-  animation: rise 0.8s ease-out;
-}
-
-.title-block h1 {
-  margin: 8px 0 10px;
-  font-size: clamp(28px, 3.4vw, 38px);
-  font-weight: 700;
-}
-
-.eyebrow {
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.logo-link {
-  text-decoration: none;
-  color: inherit;
-  font-weight: 600;
-}
-
-.logo-link:hover {
-  color: var(--accent);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: 15px;
-  color: var(--muted);
-}
-
-.hero-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.chips {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip {
-  border: 1px solid rgba(19, 33, 60, 0.15);
-  background: rgba(255, 255, 255, 0.7);
   padding: 8px 14px;
-  border-radius: 999px;
+  background: #1d4ed8;
+  color: white;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  border: 1.5px solid white;
+  text-align: center;
+  z-index: 10;
+  cursor: pointer;
+}
+
+:global(.marker-title) {
+  font-weight: 700;
   font-size: 13px;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 2px;
+  white-space: nowrap;
 }
 
-.chip.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 12px 22px rgba(29, 78, 216, 0.35);
+:global(.marker-price) {
+  font-size: 11px;
+  opacity: 0.95;
 }
 
-.chip:hover {
-  transform: translateY(-1px);
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 14px;
-}
-
-.stat {
-  background: var(--card);
-  padding: 12px 16px;
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
-}
-
-.stat strong {
-  display: block;
-  font-size: 14px;
-}
-
-.stat span {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.map-shell {
-  margin-top: 24px;
-  position: relative;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  background: var(--card);
-  backdrop-filter: blur(12px);
-  z-index: 1;
-  animation: rise 0.9s ease-out;
-}
-
-.map-toolbar {
+:global(.marker-tail) {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 8px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 34px rgba(29, 78, 216, 0.18);
-  z-index: 2;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: inherit;
 }
 
-.search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  background: #eef4ff;
-  border-radius: 10px;
-  padding: 8px 12px;
-  color: var(--muted);
-}
+:global(.custom-bubble-marker.apartment) { background-color: #1d4ed8; }
+:global(.custom-bubble-marker.commercial) { background-color: #22c0a6; }
+:global(.custom-bubble-marker.house) { background-color: #fbbf24; }
 
-.search input {
-  border: none;
-  background: transparent;
-  width: 100%;
-  font-size: 10px;
-  outline: none;
-  color: var(--ink);
-  font-family: inherit;
-}
+.map-legend { position: absolute; bottom: 16px; left: 16px; display: flex; gap: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(15, 31, 58, 0.86); color: #fff; font-size: 12px; z-index: 2; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.sale { background: var(--accent-soft); }
+.dot.rent { background: var(--mint); }
+.dot.lease { background: var(--sun); }
 
-.ghost {
-  border: none;
-  background: #e9f1ff;
-  padding: 8px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--ink);
-}
-
-#map {
-  width: 100%;
-  height: clamp(320px, 62vh, 560px);
-}
-
-.map-legend {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
-  display: flex;
-  gap: 14px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgba(15, 31, 58, 0.86);
-  color: #fff;
-  font-size: 12px;
-  z-index: 2;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot.sale {
-  background: var(--accent-soft);
-}
-
-.dot.rent {
-  background: var(--mint);
-}
-
-.dot.lease {
-  background: var(--sun);
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+@keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 768px) {
-  .map-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .map-legend {
-    flex-wrap: wrap;
-  }
-
-  #map {
-    height: clamp(320px, 58vh, 460px);
-  }
+  .map-toolbar { flex-direction: column; align-items: stretch; }
+  .map-legend { flex-wrap: wrap; }
+  #map { height: clamp(320px, 58vh, 460px); }
 }
 </style>
