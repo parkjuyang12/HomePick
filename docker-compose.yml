@@ -35,6 +35,8 @@ services:
       DJANGO_DB_HOST: db
       DJANGO_DB_PORT: 5432
       GMS_API_KEY: ${GMS_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      KAKAO_REST_API_KEY: ${KAKAO_REST_API_KEY}
     depends_on:
       - db
 
@@ -51,6 +53,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    environment:
+      VUE_APP_GOOGLE_MAPS_API_KEY: ${VUE_APP_GOOGLE_MAPS_API_KEY}
     depends_on:
       - web
 

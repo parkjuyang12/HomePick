@@ -6,9 +6,9 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.db.models import F, FloatField, ExpressionWrapper
 from django.db.models.functions import ACos, Cos, Radians, Sin
-from properties.models import Property
+from elasticsearch import Elasticsearch
 from .utils import GoogleMapClient
-from properties.services.history import search_property_history
+from properties.services.history import format_deal_date, normalize_price
 
 es = Elasticsearch("http://elasticsearch:9200")
 
@@ -82,8 +82,9 @@ def search_nearby_properties(request):
 
 class PropertyHistoryView(APIView):
     """
-    마커클릭 -> property_id 기준 거래 이력 조회
+    마커 클릭 → property_id 기준 거래 이력 조회
     """
+
     def get(self, request, property_id):
         query = {
             "size": 1000,
@@ -97,7 +98,26 @@ class PropertyHistoryView(APIView):
             ]
         }
 
-        res = es.search(index="realestate_history",body=query)
+        res = es.search(index="realestate_history", body=query)
+        rows = [hit["_source"] for hit in res["hits"]["hits"]]
 
-        data = [hit["_source"] for hit in res["hits"]["hits"]]
-        return Response(data)
+        history = []
+        for row in rows:
+            detail = row.get("detail", {})
+
+            history.append({
+                "deal_date": format_deal_date(row.get("deal_date")),
+                "transaction_type": row.get("transaction_type"),
+                "price": normalize_price(row),
+
+                "spec": {
+                    "area": detail.get("area"),
+                    "floor": detail.get("floor"),
+                },
+
+                "meta": {
+                    "buyer_type": detail.get("buyer_type"),
+                    "seller_type": detail.get("sler_type"),
+                    "deal_method": detail.get("deal_method"),
+                }
+            })
