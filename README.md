@@ -11,7 +11,7 @@
 ```
 [공공데이터 포털 API]
         │
-        │ (10분 주기 Polling)
+        │ (주기적 Polling)
         ▼
 [API Poller]
         │
@@ -40,7 +40,7 @@ Apache Flink
 
 **책임**
 
-* 공공데이터 API를 **10분마다 호출**
+* 공공데이터 API 호출
 * 가능한 경우:
 
   * `lastUpdated`
