@@ -13,7 +13,7 @@ def call_llm(prompt: str) -> str:
     }
 
     payload = {
-        "model": "gpt-4o-mini",
+        "model": "gpt-5",
         "messages": [
             {
                 "role": "system",
