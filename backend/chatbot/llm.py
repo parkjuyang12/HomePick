@@ -23,16 +23,23 @@ def call_llm(prompt: str) -> str:
                 이외 지역 질문에는
                 '데이터에 존재하지 않아 답변이 불가능합니다. 현재는 서울/경기만 서비스합니다. 추후 서비스 확장예정입니다.'
                 라고 답해. 또한 부동산 관련 이외 질문에는 답변하지 마.
-                자연스럽고 이해하기 쉽게 답변해.
+                자연스럽고 이해하기 쉽게 답변해.    
                 """
             },
             {"role": "user", "content": prompt}
         ]
     }
-    res = requests.post(GMS_BASE_URL, headers=headers, json=payload, timeout=30)
+    try:
+        res = requests.post(GMS_BASE_URL, headers=headers, json=payload, timeout=50)
+        res.raise_for_status()
+        data = res.json()
+        return data["choices"][0]["message"]["content"]
 
-    if res.status_code != 200:
-        raise RuntimeError(f"GMS LLM error {res.status_code}: {res.text}")
+    except requests.exceptions.ReadTimeout:
+        return (
+            "현재 AI 응답이 지연되고 있어요.\n"
+            "잠시 후 다시 시도하거나 질문을 조금 더 구체화해 주세요."
+        )
 
-    data = res.json()
-    return data["choices"][0]["message"]["content"]
+    except requests.exceptions.RequestException:
+        return "AI 서버와 통신 중 문제가 발생했습니다."
