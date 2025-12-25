@@ -7,8 +7,8 @@
       @click="handleCategoryClick(c)"
     >
       <div class="icon-wrapper">
-        <img :src="c.icon" class="category-icon" />
-      </div>
+          <img :src="c.icon" class="category-icon" @error="onImgError" :alt="c.label" />
+        </div>
       <p>{{ c.label }}</p>
     </div>
   </div>
@@ -45,6 +45,13 @@ export default {
           // address 제거: 현재 위치를 사용하도록 함
         }
       }).catch(() => {});
+    }
+    ,onImgError(e) {
+      // 이미지가 로드되지 않을 때 대비해 대체 아이콘을 설정합니다.
+      // aptImg를 기본 대체 이미지로 사용합니다.
+      e.target.onerror = null;
+      e.target.src = aptImg;
+      console.warn('Category image failed to load, using fallback:', e.target);
     }
   }
 };

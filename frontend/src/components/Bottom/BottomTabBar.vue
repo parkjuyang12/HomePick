@@ -22,9 +22,10 @@ export default {
       current: "/home", // 기본 활성 탭
       tabs: [
         { label: "홈", route: "/home" },
-        { label: "정책", route: "/policy" },
+        // { label: "정책", route: "/policy" },
         { label: "지도", route: "/map" },
-        { label: "관심", route: "/favorite" },
+        { label: "챗봇", route: "/chatbot" },
+        // { label: "관심", route: "/favorite" },
         { label: "더보기", route: "/more" }
       ]
     };

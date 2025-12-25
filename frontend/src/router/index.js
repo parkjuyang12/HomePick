@@ -25,12 +25,14 @@ const routes = [
     component: () => import('../views/HomePage.vue'),
     meta: { requiresAuth: true }  // 로그인 필요
   },
+  /*
   {
     path: '/policy',
     name: 'Policy',
     component: () => import('../views/PolicyPage.vue'),
     meta: { requiresAuth: true }
   },
+  */
   {
     path: '/map',
     name: 'Map',
@@ -43,12 +45,14 @@ const routes = [
     component: () => import('../views/PropertyDetailPage.vue'),
     meta: { requiresAuth: true }
   },
+  /*
   {
     path: '/favorite',
     name: 'Favorite',
     component: () => import('../views/FavoritePage.vue'),
     meta: { requiresAuth: true }
   },
+  */
   {
     path: '/more',
     name: 'More',
