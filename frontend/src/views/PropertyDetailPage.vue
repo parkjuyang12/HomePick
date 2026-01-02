@@ -101,7 +101,7 @@
           <div class="history-main">
             <div class="history-title">
               <span class="chip">{{ formatTransactionType(item.transaction_type) }}</span>
-              <span class="chip subtle">{{ formatAssetType(item.asset_type) }}</span>
+              <span class="chip subtle">{{ formatAssetType(item) }}</span>
             </div>
             <div class="history-amount">{{ formatDealAmount(item) }}</div>
             <div class="history-meta">
@@ -332,15 +332,43 @@ export default {
       const dd = String(now.getDate()).padStart(2, '0');
       return Number(`${yyyy}${mm}${dd}`);
     },
-    formatAssetType(value) {
-      if (!value) return '-';
+    formatAssetType(item) {
+      // item이 문자열이면 기존 방식 (하위 호환)
+      if (typeof item === 'string') {
+        const map = {
+          APARTMENT: '아파트',
+          HOUSE: '주택',
+          COMMERCIAL: '상가',
+          OFFICETEL: '오피스텔',
+        };
+        return map[item] || item;
+      }
+
+      // item이 객체면 상세 판단
+      if (!item || !item.asset_type) return '-';
+      
+      const assetType = item.asset_type;
+      
+      // HOUSE + RENT + 작은 면적 → 원룸
+      if (assetType === 'HOUSE' && item.transaction_type === 'RENT') {
+        const id = item._id || item.trade_fingerprint || '';
+        const parts = id.split('|');
+        const areaStr = parts[parts.length - 1];
+        const area = parseFloat(areaStr);
+        
+        if (area && !isNaN(area) && area <= 33) {
+          return '원룸';
+        }
+      }
+      
+      // 기본 매핑
       const map = {
         APARTMENT: '아파트',
         HOUSE: '주택',
         COMMERCIAL: '상가',
         OFFICETEL: '오피스텔',
       };
-      return map[value] || value;
+      return map[assetType] || assetType;
     },
     formatTransactionType(value) {
       if (!value) return '-';

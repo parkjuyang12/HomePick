@@ -185,7 +185,7 @@ export default {
       items.forEach(item => {
         const isCluster = !!item.isCluster;
         const prop = item.sample || item;
-        const priceLabel = this.formatPrice(prop.price);
+        const priceLabel = this.formatPriceForMarker(prop);
         const typeClass = prop.asset_type ? prop.asset_type.toLowerCase() : 'default';
 
         const sizeForCluster = isCluster ? this.getClusterSize(item.count, zoom) : null;
@@ -337,6 +337,54 @@ export default {
       if (eok > 0) res += `${eok}억 `;
       if (man > 0) res += `${man.toLocaleString()}`;
       return res + "만";
+    },
+
+    formatPriceForMarker(prop) {
+      if (!prop) return "정보없음";
+      
+      // 전월세인 경우
+      if (prop.transaction_type === 'RENT') {
+        const deposit = prop.deposit || 0;
+        const monthlyRent = prop.monthly_rent || 0;
+        
+        if (deposit === 0 && monthlyRent === 0) {
+          return "정보없음";
+        }
+        
+        // 전세 (월세가 0)
+        if (monthlyRent === 0) {
+          const depositEok = Math.floor(deposit / 10000);
+          return depositEok > 0 ? `${depositEok}억` : `${deposit}만`;
+        }
+        
+        // 월세 (보증금/월세)
+        const depositEok = Math.floor(deposit / 10000);
+        const depositMan = deposit % 10000;
+        const monthlyMan = monthlyRent;
+        
+        let depositStr = "";
+        if (depositEok > 0) {
+          depositStr = depositMan > 0 ? `${depositEok}억${depositMan}` : `${depositEok}억`;
+        } else {
+          depositStr = `${deposit}`;
+        }
+        
+        return `${depositStr}/${monthlyMan}`;
+      }
+      
+      // 매매인 경우
+      const price = prop.price || prop.deal_amount || prop.amount || 0;
+      if (price === 0) {
+        return "정보없음";
+      }
+      
+      const eok = Math.floor(price / 10000);
+      const man = price % 10000;
+      
+      if (eok > 0) {
+        return man > 0 ? `${eok}억 ${man}만` : `${eok}억`;
+      }
+      return `${man}만`;
     },
 
     handleLocalSearch() {
