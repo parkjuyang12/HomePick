@@ -169,5 +169,6 @@ es-template-current:
 		-d @elasticsearch/realestate_current_template.json \
 		| jq . || true
 
+	
 es-template-check:
 	curl -s "$(ES_HOST)/_index_template/realestate_current_template" | jq . || true

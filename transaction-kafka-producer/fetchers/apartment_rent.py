@@ -34,7 +34,13 @@ def fetch_apartment_rent_month(
         resp.raise_for_status()
 
         body = resp.json()["response"]["body"]
-        items = body.get("items", {}).get("item", [])
+        items_wrapper = body.get("items", {})
+        
+        # items가 문자열인 경우 처리 (빈 응답)
+        if isinstance(items_wrapper, str):
+            break
+            
+        items = items_wrapper.get("item", [])
 
         if not items:
             break
