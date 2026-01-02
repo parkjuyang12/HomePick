@@ -1,0 +1,98 @@
+{
+    "index_patterns": [
+        "home_snapshot"
+    ],
+    "priority": 100,
+    "template": {
+        "settings": {
+            "number_of_shards": 1,
+            "number_of_replicas": 0,
+            "refresh_interval": "30s"
+        },
+        "mappings": {
+            "properties": {
+                "id": {
+                    "type": "keyword"
+                },
+                "generated_at": {
+                    "type": "date"
+                },
+                "window_days": {
+                    "type": "integer"
+                },
+                "volume_daily": {
+                    "type": "nested",
+                    "properties": {
+                        "date": {
+                            "type": "keyword"
+                        },
+                        "count": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "hot_properties": {
+                    "type": "nested",
+                    "properties": {
+                        "property_id": {
+                            "type": "keyword"
+                        },
+                        "score": {
+                            "type": "float"
+                        },
+                        "reason": {
+                            "type": "text"
+                        },
+                        "asset_type": {
+                            "type": "keyword"
+                        },
+                        "transaction_type": {
+                            "type": "keyword"
+                        },
+                        "address_display": {
+                            "type": "text"
+                        },
+                        "trade_count_90d": {
+                            "type": "integer"
+                        },
+                        "latest_price": {
+                            "type": "long"
+                        },
+                        "latest_deposit": {
+                            "type": "long"
+                        },
+                        "latest_monthly_rent": {
+                            "type": "long"
+                        }
+                    }
+                },
+                "hot_regions": {
+                    "type": "nested",
+                    "properties": {
+                        "lawd_cd": {
+                            "type": "keyword"
+                        },
+                        "region_name": {
+                            "type": "text"
+                        },
+                        "score": {
+                            "type": "float"
+                        },
+                        "reason": {
+                            "type": "text"
+                        },
+                        "trade_count_30d": {
+                            "type": "integer"
+                        },
+                        "trade_count_prev_30d": {
+                            "type": "integer"
+                        },
+                        "growth_rate": {
+                            "type": "float"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

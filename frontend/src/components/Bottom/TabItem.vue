@@ -1,6 +1,16 @@
 <template>
   <div class="tab-item" @click="go">
-    <img :src="icon" :class="{ active: isActive }" class="tab-icon" />
+    <template v-if="label === '챗봇'">
+      <svg class="tab-icon" :class="{ active: isActive }" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="8.5" cy="10.5" r="1" fill="currentColor" />
+        <circle cx="12" cy="10.5" r="1" fill="currentColor" />
+        <circle cx="15.5" cy="10.5" r="1" fill="currentColor" />
+      </svg>
+    </template>
+    <template v-else>
+      <img :src="icon" :class="{ active: isActive }" class="tab-icon" />
+    </template>
   </div>
 </template>
 

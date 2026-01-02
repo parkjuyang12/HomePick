@@ -33,7 +33,7 @@ AUTH_USER_MODEL = 'users.User'
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:8080')
 
 # 카카오 설정
-KAKAO_REST_API_KEY = os.environ.get('KAKAO_REST_API_KEY', '59a25a1c255d5c3afbbcb2633d17c693')
+KAKAO_REST_API_KEY = os.environ.get('KAKAO_REST_API_KEY')
 # 🚨 수정: allauth 표준 경로를 사용하고, 끝에 슬래시(/)를 붙입니다.
 KAKAO_REDIRECT_URI = os.environ.get('KAKAO_REDIRECT_URI', 'http://localhost:8000/api/v1/auth/social/login/kakao/callback/')
 

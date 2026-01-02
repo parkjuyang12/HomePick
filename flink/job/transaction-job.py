@@ -41,6 +41,69 @@ def to_int(v):
     except Exception:
         return 0
 
+def to_float(v):
+    if v is None:
+        return 0.0
+    try:
+        return float(str(v).replace(',', ''))
+    except Exception:
+        return 0.0
+
+# =========================================================
+# 원룸/주택 구분 로직
+# =========================================================
+def determine_room_type(asset_type: str, transaction_type: str, payload: dict, deposit: int, monthly_rent: int, price: int) -> str:
+    """
+    HOUSE인 경우만 원룸/주택 구분
+    
+    - TRADE: 무조건 "주택"
+    - RENT: 면적/가격으로 판단
+    
+    HOUSE 면적 필드:
+    - totalFloorAr: 연면적 (주로 사용)
+    - plottageAr: 대지면적 (보조)
+    - excluUseAr: 전용면적 (거의 없음)
+    """
+    if asset_type != "HOUSE":
+        return None
+    
+    # TRADE는 무조건 주택
+    if transaction_type == "TRADE":
+        return "주택"
+    
+    # RENT만 상세 판단
+    if transaction_type != "RENT":
+        return None
+    
+    # 1. 면적 확인 (HOUSE는 주로 totalFloorAr만 있음)
+    area = to_float(payload.get("totalFloorAr"))  # 연면적 (우선)
+    if not area:
+        area = to_float(payload.get("excluUseAr"))  # 전용면적 (있으면)
+    if not area:
+        area = to_float(payload.get("plottageAr"))  # 대지면적 (최후)
+    
+    if area and area <= 33:
+        return "원룸"
+    elif area and area > 33:
+        return "주택"
+    
+    # 2. 면적 정보 없으면 가격으로 판단
+    # 전월세: 보증금 1000만원 = 월세 10만원 환산
+    if deposit or monthly_rent:
+        deposit_val = deposit if deposit else 0
+        monthly_val = monthly_rent if monthly_rent else 0
+        
+        # 만원 단위로 환산
+        converted_rent = (deposit_val / 100) + monthly_val
+        
+        if converted_rent <= 150:  # 150만원 이하
+            return "원룸"
+        else:
+            return "주택"
+    
+    # 판단 불가
+    return None
+
 # =========================================================
 # Price parsing (TRADE vs RENT)
 # =========================================================
@@ -301,7 +364,7 @@ def build_history_detail(asset: str, payload: dict) -> dict:
     
     return {}
 
-def build_current_doc(event, payload, deal_date, price, deposit, monthly_rent, count, latest_price, latest_tx_type):
+def build_current_doc(event, payload, deal_date, latest_price, latest_deposit, latest_monthly_rent, count, latest_tx_type):
     return {
         "asset_type": event["asset_type"],
         "property_id": event["property_id"],
@@ -309,18 +372,31 @@ def build_current_doc(event, payload, deal_date, price, deposit, monthly_rent, c
 
         "latest_trade": {
             "transaction_type": latest_tx_type,
-            "price": latest_price,
+            "price": latest_price if latest_tx_type == "TRADE" else None,
+            "deposit": latest_deposit if latest_tx_type == "RENT" else None,
+            "monthly_rent": latest_monthly_rent if latest_tx_type == "RENT" else None,
             "deal_date": deal_date,
         },
 
         "trade_count": count,
         "address": build_current_address(event, payload),
         "detail": build_current_detail(event["asset_type"], payload),
+        "location": None,
 
         "updated_at": datetime.utcnow().isoformat(),
     }
 
 def build_history_doc(event, payload, deal_date, price, deposit, monthly_rent):
+    # 원룸/주택 구분
+    room_type = determine_room_type(
+        event["asset_type"],
+        event["transaction_type"],
+        payload,
+        deposit,
+        monthly_rent,
+        price
+    )
+    
     return {
         "asset_type": event["asset_type"],
         "property_id": event["property_id"],
@@ -332,6 +408,8 @@ def build_history_doc(event, payload, deal_date, price, deposit, monthly_rent):
         "price": price,
         "deposit": deposit,
         "monthly_rent": monthly_rent,
+        
+        "room_type": room_type,  # 원룸/주택 구분 (HOUSE+RENT만 해당)
 
         "detail": build_history_detail(event["asset_type"], payload),
 
@@ -349,7 +427,13 @@ class PropertyAggregator(KeyedProcessFunction):
         self.latest_price = runtime_context.get_state(
             ValueStateDescriptor("latest_price", Types.INT())
         )
-        self.latest_tx_type = runtime_context.get_state(   # ⭐ 추가
+        self.latest_deposit = runtime_context.get_state(
+            ValueStateDescriptor("latest_deposit", Types.INT())
+        )
+        self.latest_monthly_rent = runtime_context.get_state(
+            ValueStateDescriptor("latest_monthly_rent", Types.INT())
+        )
+        self.latest_tx_type = runtime_context.get_state(
         ValueStateDescriptor("latest_tx_type", Types.STRING())
         )
         self.trade_count = runtime_context.get_state(
@@ -372,18 +456,22 @@ class PropertyAggregator(KeyedProcessFunction):
         prev_date = self.latest_date.value()
         if prev_date is None or deal_date > int(prev_date):
             self.latest_date.update(str(deal_date))
-            self.latest_price.update(price or deposit or monthly_rent)
+            self.latest_price.update(price if price else 0)
+            self.latest_deposit.update(deposit if deposit else 0)
+            self.latest_monthly_rent.update(monthly_rent if monthly_rent else 0)
             self.latest_tx_type.update(tx_type)   
 
         latest_deal_date = int(self.latest_date.value())
-        latest_price = self.latest_price.value()
+        latest_price = self.latest_price.value() or 0
+        latest_deposit = self.latest_deposit.value() or 0
+        latest_monthly_rent = self.latest_monthly_rent.value() or 0
         latest_tx_type = self.latest_tx_type.value() or tx_type
 
         current_doc = build_current_doc(
             event, payload,
             latest_deal_date,
-            price, deposit, monthly_rent,
-            count, latest_price,
+            latest_price, latest_deposit, latest_monthly_rent,
+            count,
             latest_tx_type
         )
 

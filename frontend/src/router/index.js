@@ -25,12 +25,14 @@ const routes = [
     component: () => import('../views/HomePage.vue'),
     meta: { requiresAuth: true }  // 로그인 필요
   },
+  /*
   {
     path: '/policy',
     name: 'Policy',
     component: () => import('../views/PolicyPage.vue'),
     meta: { requiresAuth: true }
   },
+  */
   {
     path: '/map',
     name: 'Map',
@@ -38,11 +40,19 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/property/:id',
+    name: 'PropertyDetail',
+    component: () => import('../views/PropertyDetailPage.vue'),
+    meta: { requiresAuth: true }
+  },
+  /*
+  {
     path: '/favorite',
     name: 'Favorite',
     component: () => import('../views/FavoritePage.vue'),
     meta: { requiresAuth: true }
   },
+  */
   {
     path: '/more',
     name: 'More',
@@ -57,17 +67,17 @@ const routes = [
 
 // 라우터 인스턴스 생성
 const router = createRouter({
-  history: createWebHistory(), 
+  history: createWebHistory(),
   routes
 });
 
 // 네비게이션 가드 - 로그인 체크
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('auth_token');
-  
+
   console.log('🔀 라우팅:', from.path, '→', to.path);
   console.log('🔑 토큰 존재:', !!token);
-  
+
   // 로그인이 필요한 페이지인데 토큰이 없으면
   if (to.meta.requiresAuth && !token) {
     console.log('❌ 로그인 필요 - /welcome로 리다이렉트');

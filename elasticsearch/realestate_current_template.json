@@ -1,0 +1,15 @@
+{
+    "index_patterns": [
+        "realestate_current_*"
+    ],
+    "priority": 100,
+    "template": {
+        "mappings": {
+            "properties": {
+                "location": {
+                    "type": "geo_point"
+                }
+            }
+        }
+    }
+}

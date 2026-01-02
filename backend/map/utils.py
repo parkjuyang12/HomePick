@@ -1,5 +1,8 @@
 from django.conf import settings
+import logging
 import requests
+
+logger = logging.getLogger(__name__)
 
 class GoogleMapClient:
     """
@@ -11,7 +14,23 @@ class GoogleMapClient:
     def get_lat_lng(self, address):
         """
             주소를 입력 받아 (위도, 경도) 튜플을 반환하는 함수
+            - 좌표 형태("lat,lng")인 경우: 바로 파싱하여 반환
+            - 주소 문자열인 경우: Google Geocoding API 호출
         """
+        # 좌표 형태인지 확인 (예: "37.1234,127.5678")
+        if ',' in address:
+            try:
+                parts = address.split(',')
+                if len(parts) == 2:
+                    lat = float(parts[0].strip())
+                    lng = float(parts[1].strip())
+                    # 유효한 좌표 범위 확인
+                    if -90 <= lat <= 90 and -180 <= lng <= 180:
+                        return lat, lng
+            except ValueError:
+                pass  # 숫자 변환 실패 시 일반 주소로 처리
+
+        # 일반 주소 문자열 처리
         endpoint = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {
             "address": address,
@@ -27,5 +46,11 @@ class GoogleMapClient:
             location = data['results'][0]['geometry']['location']
             return location['lat'], location['lng']
         else:
+            logger.warning(
+                "Geocode failed: status=%s, error_message=%s, address=%r",
+                data.get('status'),
+                data.get('error_message'),
+                address,
+            )
             return None, None
     

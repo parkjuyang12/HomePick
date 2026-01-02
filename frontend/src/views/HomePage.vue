@@ -1,35 +1,27 @@
 <template>
   <div class="home-page">
-    <!-- 스크롤 가능한 콘텐츠 -->
     <div class="home-content">
-      <!-- 상단 헤더 -->
       <HomeHeader />
 
-      <!-- 검색 -->
-      <HomeSearch />
+      <HomeSearch @search="goToMap" />
 
-      <!-- 카테고리 -->
       <HomeCategory />
 
-      <!-- 실시간 차트 (카테고리 아래) -->
       <RealTimeChart :points="36" :base="12000" />
 
-      <!-- 추천 리스트 -->
       <HomeRecommend />
-      <!-- 챗봇 카드 (홈 화면에도 노출) -->
+      
       <HomeChatbot />
     </div>
 
-    <!-- 하단 탭바 (절대 위치) -->
     <div class="home-tabbar">
       <BottomTabBar />
     </div>
-    
-    <!-- 챗봇 바로가기: 헤더의 알림 아이콘 옆에 위치합니다. -->
   </div>
 </template>
 
-<script>
+<script setup>
+import { useRouter } from 'vue-router'; // 라우터 사용을 위해 추가
 import HomeHeader from "@/components/Top/home/HomeHeader.vue";
 import HomeSearch from "@/components/Top/home/HomeSearch.vue";
 import HomeCategory from "@/components/Top/home/HomeCategory.vue";
@@ -38,22 +30,19 @@ import BottomTabBar from "@/components/Bottom/BottomTabBar.vue";
 import RealTimeChart from '@/components/Top/home/RealTimeChart.vue';
 import HomeChatbot from "@/components/Top/home/HomeChatbot.vue";
 
-export default {
-  name: "HomePage",
-  components: {
-    HomeHeader,
-    HomeSearch,
-    HomeCategory,
-    HomeRecommend,
-    HomeChatbot,
-    BottomTabBar,
-    RealTimeChart
-  }
-  
-};
-</script>
+const router = useRouter();
 
-<script setup>
+/**
+ * 검색 실행 시 지도 페이지로 이동하는 함수
+ * @param {string} address - 사용자가 입력한 검색어 (예: 판교역)
+ */
+const goToMap = (address) => {
+  // router push를 통해 주소 정보를 쿼리로 담아 이동합니다.
+  router.push({
+    path: '/map', // 프로젝트의 실제 지도 라우트 경로 확인 필요
+    query: { address: address }
+  });
+};
 </script>
 
 <style scoped>
@@ -65,26 +54,18 @@ export default {
   position: relative;
 }
 
-/* 스크롤 가능한 콘텐츠 영역 */
 .home-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 90px; /* TabBar 높이만큼 여백 */
+  padding-bottom: 90px;
   background: #ffffff;
 }
 
-/* 스크롤바 숨김 */
-.home-content::-webkit-scrollbar {
-  display: none;
-}
+.home-content::-webkit-scrollbar { display: none; }
+.home-content { scrollbar-width: none; }
 
-.home-content {
-  scrollbar-width: none;
-}
-
-/* 하단 탭바 - absolute로 변경 */
 .home-tabbar {
   position: absolute;
   bottom: 0;
@@ -95,7 +76,4 @@ export default {
   box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.06);
   border-top: 1px solid #f0f2f5;
 }
-
-/* Floating chat button (top-right) */
-.floating-chat { display:none; }
 </style>

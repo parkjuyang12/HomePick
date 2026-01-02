@@ -1,12 +1,12 @@
+# map/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.conf import settings
 from django.http import JsonResponse
-from django.db.models import F, FloatField, ExpressionWrapper
-from django.db.models.functions import ACos, Cos, Radians, Sin
-from properties.models import Property
+from properties.utils import ESPropertyClient
+from properties.services.history import search_property_history
 from .utils import GoogleMapClient
 
 class MapConfigView(APIView):
@@ -42,36 +42,49 @@ class GeocodeView(APIView):
 
 def search_nearby_properties(request):
     address = request.GET.get('address')
-    radius = float(request.GET.get('radius', 2))
-
+    category = request.GET.get('category')
+    if not address:
+        return JsonResponse({'error': 'Address parameter is required.'}, status=400)
     # utils.py를 사용하여 주소를 좌표로 변환
-    client = GoogleMapClient()
-    lat, lng = client.get_lat_lng(address)
+    geo_client = GoogleMapClient()
+    lat, lng = geo_client.get_lat_lng(address)
 
-    # Haversine 공식을 이용한 DB 쿼리 필터링 (6371은 지구 반지름 km)
-    distance_formula = 6371 * ACos(
-        Cos(Radians(lat)) * Cos(Radians(F('lat'))) *
-        Cos(Radians(F('lng')) - Radians(lng)) +
-        Sin(Radians(lat)) * Sin(Radians(F('lat')))
-    )
+    if lat is None or lng is None:
+        return JsonResponse({'error': 'Failed to geocode address.'}, status=400)
 
-    # 반경 내 매물 필터링
-    nearby_list = Property.objects.annotate(
-        distance=ExpressionWrapper(distance_formula, output_field=FloatField())
-    ).filter(distance__lte=radius).order_by('distance')
+    # ES에서 데이터 가져오기
+    es_client = ESPropertyClient()
+    hits = es_client.search_nearby(lat, lng, radius_km=2, category=category)
 
-    # 결과 반환
-    results = [
-        {
-            'id': p.id,
-            'title': p.title,
-            'lat': p.lat,
-            'lng': p.lng,
-            'distance': round(p.distance, 2)
-        } for p in nearby_list
-    ]
+    # 프론트엔드용 마커 데이터 가공
+    results = []
+    for hit in hits:
+        source = hit['_source']
+        results.append({
+            'id': hit['_id'],
+            'title': source.get('address', {}).get('display'),
+            'lat': source.get('location', {}).get('lat'),
+            'lng': source.get('location', {}).get('lon'),
+            'price': source.get('latest_trade', {}).get('price'),
+            'asset_type': source.get('asset_type'), # Apartment/House/Commercial/Officetel
+            'transaction_type': source.get('latest_trade', {}).get('transaction_type'), # 매매/전세/월세
+            'index': hit['_index'] # 아이콘 구분용
+        })
 
     return JsonResponse({
         'center': {'lat': lat, 'lng': lng},
         'results': results
+    })
+
+
+def property_history(request, property_id):
+    if not property_id:
+        return JsonResponse({'error': 'property_id is required.'}, status=400)
+
+    history = search_property_history(property_id)
+    display_name = ESPropertyClient().get_display_name(property_id)
+    return JsonResponse({
+        'property_id': property_id,
+        'display_name': display_name,
+        'history': history
     })
